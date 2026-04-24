@@ -10,11 +10,25 @@ import { ApiError, apiRequest } from '../lib/api'
 import { useAuth } from '../features/auth/AuthContext'
 
 type ConstructionStatus = 'SCHEDULED' | 'IN_PROGRESS' | 'COMPLETED'
+type BoardFilter = 'ALL' | ConstructionStatus
+
+type ConstructionColumnState = {
+  items: Construction[]
+  page: number
+  totalPages: number
+  totalElements: number
+  isLoading: boolean
+  error: string
+}
 
 type Construction = {
   id: number
   name: string
   status: ConstructionStatus
+  clientName: string | null
+  localContact: string | null
+  endDate: string | null
+  overdueDays: number | null
 }
 
 type Client = {
@@ -122,12 +136,32 @@ const statusAccentClass: Record<ConstructionStatus, string> = {
   COMPLETED: 'board-column--finalizada',
 }
 
+const boardStatuses: ConstructionStatus[] = ['IN_PROGRESS', 'SCHEDULED', 'COMPLETED']
+const boardPageSize = 8
+
+const initialColumnState: ConstructionColumnState = {
+  items: [],
+  page: -1,
+  totalPages: 0,
+  totalElements: 0,
+  isLoading: false,
+  error: '',
+}
+
+const initialColumnsState: Record<ConstructionStatus, ConstructionColumnState> = {
+  IN_PROGRESS: { ...initialColumnState },
+  SCHEDULED: { ...initialColumnState },
+  COMPLETED: { ...initialColumnState },
+}
+
 export function ConstructionsPage() {
   const { token } = useAuth()
   const toast = useToast()
-  const [items, setItems] = useState<Construction[]>([])
+  const [columns, setColumns] = useState<Record<ConstructionStatus, ConstructionColumnState>>(initialColumnsState)
   const [clients, setClients] = useState<ClientOption[]>([])
   const [search, setSearch] = useState('')
+  const [debouncedSearch, setDebouncedSearch] = useState('')
+  const [boardFilter, setBoardFilter] = useState<BoardFilter>('ALL')
   const [isLoading, setIsLoading] = useState(true)
   const [isModalOpen, setIsModalOpen] = useState(false)
   const [isArchiveModalOpen, setIsArchiveModalOpen] = useState(false)
@@ -145,21 +179,62 @@ export function ConstructionsPage() {
   const [form, setForm] = useState<ConstructionFormState>(initialForm)
 
   useEffect(() => {
-    void loadInitialData()
+    const timeoutId = window.setTimeout(() => {
+      setDebouncedSearch(search.trim())
+    }, 320)
+
+    return () => window.clearTimeout(timeoutId)
+  }, [search])
+
+  useEffect(() => {
+    void loadClients()
   }, [token])
 
-  async function loadInitialData() {
+  useEffect(() => {
+    void loadBoardData(debouncedSearch)
+  }, [token, debouncedSearch])
+
+  async function loadClients() {
+    try {
+      const clientsResponse = await apiRequest<PageResponse<ClientOption>>('/client', { token })
+      setClients(clientsResponse.content ?? [])
+    } catch {
+      setClients([])
+    }
+  }
+
+  async function loadBoardData(searchQuery: string) {
     setIsLoading(true)
     setError('')
 
     try {
-      const [constructionsResponse, clientsResponse] = await Promise.all([
-        apiRequest<PageResponse<Construction>>('/construction', { token }),
-        apiRequest<PageResponse<ClientOption>>('/client', { token }),
-      ])
+      const columnResponses = await Promise.all(
+        boardStatuses.map((status) =>
+          apiRequest<PageResponse<Construction>>(buildStatusFilterUrl(status, 0, boardPageSize, searchQuery), { token }),
+        ),
+      )
 
-      setItems(constructionsResponse.content ?? [])
-      setClients(clientsResponse.content ?? [])
+      const nextColumns: Record<ConstructionStatus, ConstructionColumnState> = {
+        IN_PROGRESS: { ...initialColumnState },
+        SCHEDULED: { ...initialColumnState },
+        COMPLETED: { ...initialColumnState },
+      }
+
+      for (let index = 0; index < boardStatuses.length; index += 1) {
+        const status = boardStatuses[index]
+        const response = columnResponses[index]
+
+        nextColumns[status] = {
+          items: response.content ?? [],
+          page: response.number,
+          totalPages: response.totalPages,
+          totalElements: response.totalElements,
+          isLoading: false,
+          error: '',
+        }
+      }
+
+      setColumns(nextColumns)
     } catch (err) {
       if (err instanceof ApiError) {
         setError(err.message)
@@ -168,6 +243,54 @@ export function ConstructionsPage() {
       }
     } finally {
       setIsLoading(false)
+    }
+  }
+
+  async function loadMoreByStatus(status: ConstructionStatus) {
+    const column = columns[status]
+
+    if (column.isLoading || column.page + 1 >= column.totalPages) {
+      return
+    }
+
+    const nextPage = column.page + 1
+
+    setColumns((current) => ({
+      ...current,
+      [status]: {
+        ...current[status],
+        isLoading: true,
+        error: '',
+      },
+    }))
+
+    try {
+      const response = await apiRequest<PageResponse<Construction>>(
+        buildStatusFilterUrl(status, nextPage, boardPageSize, debouncedSearch),
+        { token },
+      )
+
+      setColumns((current) => ({
+        ...current,
+        [status]: {
+          ...current[status],
+          items: [...current[status].items, ...(response.content ?? [])],
+          page: response.number,
+          totalPages: response.totalPages,
+          totalElements: response.totalElements,
+          isLoading: false,
+          error: '',
+        },
+      }))
+    } catch (err) {
+      setColumns((current) => ({
+        ...current,
+        [status]: {
+          ...current[status],
+          isLoading: false,
+          error: err instanceof ApiError ? err.message : 'Nao foi possivel carregar mais obras.',
+        },
+      }))
     }
   }
 
@@ -297,7 +420,7 @@ export function ConstructionsPage() {
       }
 
       closeWorkModals()
-      await loadInitialData()
+      await loadBoardData(debouncedSearch)
     } catch (err) {
       if (err instanceof ApiError) {
         setModalError(err.message)
@@ -323,7 +446,7 @@ export function ConstructionsPage() {
 
       closeWorkModals()
       toast.success('Obra arquivada com sucesso.')
-      await loadInitialData()
+      await loadBoardData(debouncedSearch)
     } catch (err) {
       if (err instanceof ApiError) {
         setModalError(err.message)
@@ -384,31 +507,34 @@ export function ConstructionsPage() {
     }))
   }
 
-  const filteredItems = useMemo(() => {
-    const term = search.trim().toLowerCase()
+  const groupedItems = useMemo(() => {
+    return boardStatuses.map((status) => {
+      const column = columns[status]
 
-    if (!term) return items
-
-    return items.filter((item) => item.name.toLowerCase().includes(term))
-  }, [items, search])
+      return {
+        status,
+        items: column.items,
+        totalElements: column.totalElements,
+        hasMore: column.page + 1 < column.totalPages,
+        isLoading: column.isLoading,
+        error: column.error,
+      }
+    })
+  }, [columns])
 
   const totals = useMemo(
     () => ({
-      all: items.length,
-      scheduled: items.filter((item) => item.status === 'SCHEDULED').length,
-      inProgress: items.filter((item) => item.status === 'IN_PROGRESS').length,
-      completed: items.filter((item) => item.status === 'COMPLETED').length,
+      all: columns.IN_PROGRESS.totalElements + columns.SCHEDULED.totalElements + columns.COMPLETED.totalElements,
+      scheduled: columns.SCHEDULED.totalElements,
+      inProgress: columns.IN_PROGRESS.totalElements,
+      completed: columns.COMPLETED.totalElements,
     }),
-    [items],
+    [columns],
   )
 
-  const groupedItems = useMemo(
-    () => [
-      { status: 'IN_PROGRESS' as const, items: filteredItems.filter((item) => item.status === 'IN_PROGRESS') },
-      { status: 'SCHEDULED' as const, items: filteredItems.filter((item) => item.status === 'SCHEDULED') },
-      { status: 'COMPLETED' as const, items: filteredItems.filter((item) => item.status === 'COMPLETED') },
-    ],
-    [filteredItems],
+  const visibleGroups = useMemo(
+    () => (boardFilter === 'ALL' ? groupedItems : groupedItems.filter((group) => group.status === boardFilter)),
+    [groupedItems, boardFilter],
   )
 
   return (
@@ -420,7 +546,7 @@ export function ConstructionsPage() {
             <h2 className="section-title">Obras</h2>
           </div>
 
-          <div className="works-hero__actions quali-works-actions">
+          <div className="works-hero__actions works-hero__actions--board quali-works-actions">
             <div className="hero-mini-stats quali-mini-stats">
               <div className="hero-mini-stats__item">
                 <strong>{totals.inProgress}</strong>
@@ -443,43 +569,94 @@ export function ConstructionsPage() {
           </div>
         </section>
 
-        <label className="search-field search-field--board search-field--works-page">
-          <span className="sr-only">Buscar obra</span>
-          <input
-            type="search"
-            value={search}
-            onChange={(event) => setSearch(event.target.value)}
-            placeholder="Buscar obra por nome"
-          />
-        </label>
-        {isLoading ? <p className="feedback">Carregando obras...</p> : null}
-        {!isLoading && error ? <p className="form-error">{error}</p> : null}
+        <section className="works-board-shell">
+          <div className="works-board-toolbar">
+            <label className="search-field search-field--board search-field--works-page">
+              <span className="sr-only">Buscar obra</span>
+              <input
+                type="search"
+                value={search}
+                onChange={(event) => setSearch(event.target.value)}
+                placeholder="Buscar obra por nome"
+              />
+            </label>
 
-        {!isLoading && !error ? (
-          <section className="works-board quali-works-board">
-            {groupedItems.map((group) => (
-              <article key={group.status} className={`board-column ${statusAccentClass[group.status]} quali-board-column`}>
-                <div className="board-column__header">
-                  <div>
-                    <span className="panel__eyebrow">{statusLabel[group.status]}</span>
-                    <h3>{group.items.length} obras</h3>
-                    <p>{statusDescription[group.status]}</p>
+            <div className="works-board-toolbar__filters" role="tablist" aria-label="Filtrar colunas do board">
+              <button
+                type="button"
+                className={boardFilter === 'ALL' ? 'board-filter-pill board-filter-pill--active' : 'board-filter-pill'}
+                onClick={() => setBoardFilter('ALL')}
+              >
+                Todas
+              </button>
+              <button
+                type="button"
+                className={boardFilter === 'IN_PROGRESS' ? 'board-filter-pill board-filter-pill--active' : 'board-filter-pill'}
+                onClick={() => setBoardFilter('IN_PROGRESS')}
+              >
+                Em andamento
+              </button>
+              <button
+                type="button"
+                className={boardFilter === 'SCHEDULED' ? 'board-filter-pill board-filter-pill--active' : 'board-filter-pill'}
+                onClick={() => setBoardFilter('SCHEDULED')}
+              >
+                Aguardando
+              </button>
+              <button
+                type="button"
+                className={boardFilter === 'COMPLETED' ? 'board-filter-pill board-filter-pill--active' : 'board-filter-pill'}
+                onClick={() => setBoardFilter('COMPLETED')}
+              >
+                Finalizadas
+              </button>
+            </div>
+          </div>
+
+          {isLoading ? <p className="feedback">Carregando obras...</p> : null}
+          {!isLoading && error ? <p className="form-error">{error}</p> : null}
+
+          {!isLoading && !error ? (
+            <section className="works-board quali-works-board">
+              {visibleGroups.map((group) => (
+                <article key={group.status} className={`board-column ${statusAccentClass[group.status]} quali-board-column`}>
+                  <div className="board-column__header">
+                    <div>
+                      <span className="panel__eyebrow">{statusLabel[group.status]}</span>
+                      <h3>{group.totalElements} obras</h3>
+                      <p>{statusDescription[group.status]}</p>
+                    </div>
                   </div>
-                </div>
 
-                <div className="board-column__list">
-                  {group.items.length ? (
-                    group.items.map((item) => (
-                      <ConstructionBoardCard key={item.id} item={item} onEdit={openEditModal} onArchive={openArchiveModal} />
-                    ))
-                  ) : (
-                    <p className="feedback">Nenhuma obra nesta coluna para o filtro atual.</p>
-                  )}
-                </div>
-              </article>
-            ))}
-          </section>
-        ) : null}
+                  <div className="board-column__list">
+                    {group.items.length ? (
+                      group.items.map((item) => (
+                        <ConstructionBoardCard key={item.id} item={item} onEdit={openEditModal} onArchive={openArchiveModal} />
+                      ))
+                    ) : (
+                      <p className="feedback">Nenhuma obra nesta coluna para o filtro atual.</p>
+                    )}
+                  </div>
+
+                  {group.error ? <p className="form-error board-column__error">{group.error}</p> : null}
+
+                  {group.hasMore ? (
+                    <div className="board-column__footer">
+                      <button
+                        type="button"
+                        className="ghost-page-button board-column__load-more"
+                        onClick={() => void loadMoreByStatus(group.status)}
+                        disabled={group.isLoading}
+                      >
+                        {group.isLoading ? 'Carregando...' : 'Carregar mais'}
+                      </button>
+                    </div>
+                  ) : null}
+                </article>
+              ))}
+            </section>
+          ) : null}
+        </section>
       </div>
 
       <ModalShell
@@ -573,6 +750,19 @@ function formatLongDate() {
     month: 'long',
     year: 'numeric',
   }).format(new Date())
+}
+
+function buildStatusFilterUrl(status: ConstructionStatus, page: number, size: number, search: string) {
+  const normalizedSearch = search.trim()
+  const basePath = normalizedSearch
+    ? `/construction/filter/status/${status}/search`
+    : `/construction/filter/status/${status}`
+
+  if (!normalizedSearch) {
+    return `${basePath}?page=${page}&size=${size}`
+  }
+
+  return `${basePath}?page=${page}&size=${size}&query=${encodeURIComponent(normalizedSearch)}`
 }
 
 function formatApiDate(value: string) {

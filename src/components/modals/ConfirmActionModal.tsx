@@ -28,7 +28,7 @@ export function ConfirmActionModal({
   isSubmitting = false,
   error,
   summary,
-  className = 'clients-modal clients-modal--danger',
+  className = '',
 }: ConfirmActionModalProps) {
   return (
     <ModalShell
@@ -37,17 +37,22 @@ export function ConfirmActionModal({
       eyebrow={eyebrow}
       title={title}
       description={description}
-      className={className}
+      className={`confirm-action-modal ${className}`.trim()}
     >
-      <div className="clients-archive-box">{summary}</div>
+      <div className="confirm-action-modal__summary">{summary}</div>
 
-      {error ? <p className="form-error">{error}</p> : null}
+      {error ? <p className="form-error confirm-action-modal__error">{error}</p> : null}
 
-      <div className="modal-card__actions">
-        <button type="button" className="ghost-page-button" onClick={onClose}>
+      <div className="modal-card__actions confirm-action-modal__actions">
+        <button type="button" className="ghost-page-button confirm-action-modal__button" onClick={onClose}>
           {cancelLabel}
         </button>
-        <button type="button" className="primary-button clients-danger-button" onClick={onConfirm} disabled={isSubmitting}>
+        <button
+          type="button"
+          className="primary-button clients-danger-button confirm-action-modal__button"
+          onClick={onConfirm}
+          disabled={isSubmitting}
+        >
           {isSubmitting ? 'Arquivando...' : confirmLabel}
         </button>
       </div>

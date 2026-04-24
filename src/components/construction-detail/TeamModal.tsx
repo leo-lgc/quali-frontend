@@ -53,9 +53,9 @@ export function TeamModal({
 
       try {
         const [usersRes, managersRes, adminsRes] = await Promise.all([
-          apiRequest<PagedResponse<AvailableUser>>('/user/USER', { token }),
-          apiRequest<PagedResponse<AvailableUser>>('/user/MANAGER', { token }),
-          apiRequest<PagedResponse<AvailableUser>>('/user/ADMIN', { token }),
+          apiRequest<PagedResponse<AvailableUser>>('/user/role/USER', { token }),
+          apiRequest<PagedResponse<AvailableUser>>('/user/role/MANAGER', { token }),
+          apiRequest<PagedResponse<AvailableUser>>('/user/role/ADMIN', { token }),
         ])
 
         const allUsers = [

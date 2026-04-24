@@ -5,6 +5,7 @@ import { ClientsPage } from '../pages/ClientsPage'
 import { LoginPage } from '../pages/LoginPage'
 import { ConstructionsPage } from '../pages/ConstructionsPage'
 import { ConstructionDetailPage } from '../pages/ConstructionDetailPage'
+import { TeamPage } from '../pages/TeamPage'
 
 export function AppRouter() {
   return (
@@ -22,6 +23,7 @@ export function AppRouter() {
         <Route path="/obras" element={<ConstructionsPage />} />
         <Route path="/obras/:constructionId" element={<ConstructionDetailPage />} />
         <Route path="/clientes" element={<ClientsPage />} />
+        <Route path="/equipe" element={<TeamPage />} />
       </Route>
       <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>

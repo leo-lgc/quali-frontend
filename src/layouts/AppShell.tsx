@@ -5,7 +5,7 @@ import { useAuth } from '../features/auth/AuthContext'
 const navigationItems = [
   { to: '/obras', label: 'Obras', icon: MapPinned, enabled: true },
   { to: '/clientes', label: 'Clientes', icon: ShieldUser, enabled: true },
-  { to: '#', label: 'Equipe', icon: Users, enabled: false },
+  { to: '/equipe', label: 'Equipe', icon: Users, enabled: true },
 ]
 
 export function AppShell() {
@@ -16,6 +16,8 @@ export function AppShell() {
     ? 'Obras'
     : location.pathname.startsWith('/clientes')
       ? 'Clientes'
+      : location.pathname.startsWith('/equipe')
+        ? 'Equipe'
       : 'Quali'
 
   return (

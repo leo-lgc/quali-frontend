@@ -217,14 +217,16 @@ export function ClientsPage() {
             <h2 className="section-title">Clientes</h2>
           </div>
 
-          <div className="hero-mini-stats quali-mini-stats">
-            <div className="hero-mini-stats__item">
-              <strong>{clients.length}</strong>
-              <span>Clientes</span>
-            </div>
-            <div className="hero-mini-stats__item">
-              <strong>{filteredClients.length}</strong>
-              <span>Visiveis</span>
+          <div className="works-hero__actions quali-works-actions">
+            <div className="hero-mini-stats quali-mini-stats">
+              <div className="hero-mini-stats__item">
+                <strong>{clients.length}</strong>
+                <span>Clientes</span>
+              </div>
+              <div className="hero-mini-stats__item">
+                <strong>{filteredClients.length}</strong>
+                <span>Visiveis</span>
+              </div>
             </div>
           </div>
         </section>

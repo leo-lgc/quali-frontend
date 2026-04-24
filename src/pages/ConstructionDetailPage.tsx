@@ -106,11 +106,14 @@ export function ConstructionDetailPage() {
   const [materials, setMaterials] = useState<Material[]>([])
   const [photos, setPhotos] = useState<Photo[]>([])
   const [materialForm, setMaterialForm] = useState<MaterialFormState>({ name: '', amount: '0' })
+  const [materialEditForm, setMaterialEditForm] = useState<MaterialFormState>({ name: '', amount: '0' })
+  const [editingMaterialId, setEditingMaterialId] = useState<number | null>(null)
   const [isMaterialSubmitting, setIsMaterialSubmitting] = useState(false)
   const [materialActionId, setMaterialActionId] = useState<number | null>(null)
   const [materialsError, setMaterialsError] = useState('')
   const [isPhotoUploading, setIsPhotoUploading] = useState(false)
   const [photoDeleteId, setPhotoDeleteId] = useState<number | null>(null)
+  const [isGeneratingReport, setIsGeneratingReport] = useState(false)
   const [photosError, setPhotosError] = useState('')
   const [selectedPhotoFile, setSelectedPhotoFile] = useState<File | null>(null)
   const [selectedPhotoPreviewUrl, setSelectedPhotoPreviewUrl] = useState('')
@@ -435,6 +438,52 @@ export function ConstructionDetailPage() {
     }
   }
 
+  function handleStartEditMaterial(material: Material) {
+    setEditingMaterialId(material.id)
+    setMaterialEditForm({
+      name: material.name,
+      amount: String(material.amount ?? 0),
+    })
+    setMaterialsError('')
+  }
+
+  function handleCancelEditMaterial() {
+    setEditingMaterialId(null)
+    setMaterialEditForm({ name: '', amount: '0' })
+  }
+
+  async function handleSaveMaterial(materialId: number) {
+    if (!constructionId) return
+
+    setMaterialActionId(materialId)
+    setMaterialsError('')
+
+    try {
+      await apiRequest('/material', {
+        method: 'PATCH',
+        token,
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          id: materialId,
+          name: materialEditForm.name.trim(),
+          amount: Number(materialEditForm.amount || 0),
+        }),
+      })
+
+      await loadMaterials(constructionId)
+      handleCancelEditMaterial()
+      toast.success('Material atualizado com sucesso.')
+    } catch (err) {
+      if (err instanceof ApiError) {
+        setMaterialsError(err.message)
+      } else {
+        setMaterialsError('Nao foi possivel atualizar o material.')
+      }
+    } finally {
+      setMaterialActionId(null)
+    }
+  }
+
   function handlePhotoFileChange(event: ChangeEvent<HTMLInputElement>) {
     const file = event.target.files?.[0] ?? null
 
@@ -537,6 +586,106 @@ export function ConstructionDetailPage() {
 
     return Math.min(100, Math.round((report.daysElapsed / report.agreedDeadLine) * 100))
   }, [checklistProgress.done, checklistProgress.total, report])
+
+  async function handleGenerateReportPdf() {
+    if (!report || isGeneratingReport) return
+
+    setIsGeneratingReport(true)
+
+    try {
+      const [{ default: JsPDF }, { default: autoTable }] = await Promise.all([
+        import('jspdf'),
+        import('jspdf-autotable'),
+      ])
+
+      const doc = new JsPDF({ unit: 'pt', format: 'a4' })
+      const generatedAt = new Intl.DateTimeFormat('pt-BR', {
+        dateStyle: 'short',
+        timeStyle: 'short',
+      }).format(new Date())
+
+      doc.setFont('helvetica', 'bold')
+      doc.setFontSize(18)
+      doc.text(`Relatorio da obra - ${report.name}`, 40, 46)
+      doc.setFont('helvetica', 'normal')
+      doc.setFontSize(10)
+      doc.text(`Gerado em ${generatedAt}`, 40, 64)
+
+      let cursorY = 84
+
+      autoTable(doc, {
+        startY: cursorY,
+        head: [['Campo', 'Valor']],
+        body: [
+          ['Status', statusLabel[report.status]],
+          ['Cliente', report.client.name],
+          ['Contato local', report.localContact || '-'],
+          ['Equipe', `${report.workers.length} colaboradores`],
+          ['Inicio', formatDate(report.startDate)],
+          ['Fim previsto', formatDate(report.endDate)],
+          ['Prazo acordado', `${report.agreedDeadLine} dias`],
+          ['Dias corridos', String(report.daysElapsed)],
+          ['Atraso', `${report.overdueDays} dias`],
+          ['Progresso checklist', `${checklistProgress.done}/${checklistProgress.total}`],
+        ],
+        theme: 'grid',
+        headStyles: { fillColor: [23, 50, 75], textColor: [255, 255, 255] },
+        styles: { fontSize: 9, cellPadding: 6 },
+        columnStyles: { 0: { cellWidth: 160 }, 1: { cellWidth: 340 } },
+      })
+
+      cursorY = ((doc as { lastAutoTable?: { finalY?: number } }).lastAutoTable?.finalY ?? cursorY) + 18
+
+      autoTable(doc, {
+        startY: cursorY,
+        head: [['Endereco', 'Telefone', 'Email']],
+        body: [[formatAddress(report.address), report.client.phone || '-', report.client.email || '-']],
+        theme: 'grid',
+        headStyles: { fillColor: [53, 81, 107], textColor: [255, 255, 255] },
+        styles: { fontSize: 9, cellPadding: 6 },
+      })
+
+      cursorY = ((doc as { lastAutoTable?: { finalY?: number } }).lastAutoTable?.finalY ?? cursorY) + 18
+
+      autoTable(doc, {
+        startY: cursorY,
+        head: [['Materiais', 'Quantidade', 'Disponivel']],
+        body: materials.length
+          ? materials.map((material) => [material.name, formatMaterialAmount(material.amount), material.isAvailable ? 'Sim' : 'Nao'])
+          : [['Sem materiais cadastrados', '-', '-']],
+        theme: 'grid',
+        headStyles: { fillColor: [53, 81, 107], textColor: [255, 255, 255] },
+        styles: { fontSize: 9, cellPadding: 6 },
+      })
+
+      cursorY = ((doc as { lastAutoTable?: { finalY?: number } }).lastAutoTable?.finalY ?? cursorY) + 18
+
+      autoTable(doc, {
+        startY: cursorY,
+        head: [['Checklist', 'Status']],
+        body: checklistItems.length
+          ? checklistItems.map((item) => [item.title, item.checked ? 'Concluido' : 'Pendente'])
+          : [['Sem checklist cadastrado', '-']],
+        theme: 'grid',
+        headStyles: { fillColor: [53, 81, 107], textColor: [255, 255, 255] },
+        styles: { fontSize: 9, cellPadding: 6 },
+      })
+
+      const sanitizedName = report.name
+        .normalize('NFD')
+        .replace(/[\u0300-\u036f]/g, '')
+        .replace(/[^a-zA-Z0-9-_]+/g, '-')
+        .replace(/^-+|-+$/g, '')
+        .toLowerCase()
+
+      doc.save(`reporte-${sanitizedName || report.id}.pdf`)
+      toast.success('Reporte em PDF gerado com sucesso.')
+    } catch {
+      toast.error('Nao foi possivel gerar o PDF do reporte.')
+    } finally {
+      setIsGeneratingReport(false)
+    }
+  }
 
   if (isLoading) {
     return <p className="feedback">Carregando detalhe da obra...</p>
@@ -692,7 +841,7 @@ export function ConstructionDetailPage() {
           metric={report.pictures.length ? `${report.pictures.length} fotos no report` : 'Reporte inicial para cliente pendente'}
           actions={[
             { label: 'Ver', onClick: () => setActiveTab('overview') },
-            { label: 'Gerar reporte', variant: 'secondary', onClick: () => setActiveTab('overview') },
+            { label: isGeneratingReport ? 'Gerando...' : 'Gerar PDF', variant: 'secondary', onClick: () => void handleGenerateReportPdf() },
           ]}
         />
       </section>
@@ -749,6 +898,12 @@ export function ConstructionDetailPage() {
         onIncrease={(materialId) => void handleIncreaseMaterial(materialId)}
         onDecrease={(materialId, currentAmount) => void handleDecreaseMaterial(materialId, currentAmount)}
         onDelete={(materialId) => void handleDeleteMaterial(materialId)}
+        editingMaterialId={editingMaterialId}
+        editingForm={materialEditForm}
+        onStartEdit={handleStartEditMaterial}
+        onCancelEdit={handleCancelEditMaterial}
+        onEditFormChange={(field, value) => setMaterialEditForm((current) => ({ ...current, [field]: value }))}
+        onSaveEdit={(materialId) => void handleSaveMaterial(materialId)}
       />
 
       <PhotosModal
@@ -826,6 +981,13 @@ function buildMaterialMetric(materials: Material[]) {
   if (!materials.length) return 'Pedido inicial em aprovacao'
   const available = materials.filter((material) => material.isAvailable).length
   return `${available} de ${materials.length} itens disponiveis`
+}
+
+function formatMaterialAmount(value: number) {
+  return new Intl.NumberFormat('pt-BR', {
+    minimumFractionDigits: value % 1 === 0 ? 0 : 2,
+    maximumFractionDigits: 2,
+  }).format(value)
 }
 
 function resolvePhotoUrl(url: string) {
