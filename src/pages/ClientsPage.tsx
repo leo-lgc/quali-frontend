@@ -1,5 +1,5 @@
 import { Plus, Search } from 'lucide-react'
-import { useEffect, useMemo, useState, type FormEvent } from 'react'
+import { useEffect, useState, type FormEvent } from 'react'
 import { ClientCard } from '../components/clients/ClientCard'
 import { ClientFormFields } from '../components/clients/ClientFormFields'
 import { useToast } from '../components/feedback/ToastProvider'
@@ -17,6 +17,9 @@ type Client = {
 
 type PageResponse<T> = {
   content: T[]
+  totalElements: number
+  totalPages: number
+  number: number
 }
 
 type ClientFormState = {
@@ -31,11 +34,17 @@ const initialForm: ClientFormState = {
   phone: '',
 }
 
+const clientsPageSize = 8
+
 export function ClientsPage() {
   const { token } = useAuth()
   const toast = useToast()
   const [clients, setClients] = useState<Client[]>([])
   const [search, setSearch] = useState('')
+  const [debouncedSearch, setDebouncedSearch] = useState('')
+  const [currentPage, setCurrentPage] = useState(1)
+  const [totalClients, setTotalClients] = useState(0)
+  const [totalFilteredClients, setTotalFilteredClients] = useState(0)
   const [isLoading, setIsLoading] = useState(true)
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [isEditSubmitting, setIsEditSubmitting] = useState(false)
@@ -49,16 +58,33 @@ export function ClientsPage() {
   const [isArchiveModalOpen, setIsArchiveModalOpen] = useState(false)
 
   useEffect(() => {
-    void loadClients()
-  }, [token])
+    const timeoutId = window.setTimeout(() => setDebouncedSearch(search.trim()), 250)
+    return () => window.clearTimeout(timeoutId)
+  }, [search])
 
-  async function loadClients() {
+  useEffect(() => {
+    void loadClients(1, debouncedSearch)
+  }, [token, debouncedSearch])
+
+  async function loadClients(page = currentPage, query = debouncedSearch) {
     setIsLoading(true)
     setError('')
 
     try {
-      const response = await apiRequest<PageResponse<Client>>('/client', { token })
+      const params = new URLSearchParams({ page: String(page - 1), size: String(clientsPageSize) })
+      if (query) params.set('query', query)
+
+      const response = await apiRequest<PageResponse<Client>>(`/client?${params.toString()}`, { token })
       setClients(response.content ?? [])
+      setCurrentPage(response.number + 1)
+      setTotalFilteredClients(response.totalElements)
+
+      if (query) {
+        const totalResponse = await apiRequest<PageResponse<Client>>(`/client?page=0&size=1`, { token })
+        setTotalClients(totalResponse.totalElements)
+      } else {
+        setTotalClients(response.totalElements)
+      }
     } catch (err) {
       if (err instanceof ApiError) {
         setError(err.message)
@@ -87,7 +113,7 @@ export function ClientsPage() {
 
       setForm(initialForm)
       toast.success('Cliente cadastrado com sucesso.')
-      await loadClients()
+      await loadClients(1, debouncedSearch)
     } catch (err) {
       if (err instanceof ApiError) {
         setError(err.message)
@@ -146,7 +172,7 @@ export function ClientsPage() {
 
       closeClientModals()
       toast.success('Cliente atualizado com sucesso.')
-      await loadClients()
+      await loadClients(currentPage, debouncedSearch)
     } catch (err) {
       if (err instanceof ApiError) {
         setModalError(err.message)
@@ -172,7 +198,7 @@ export function ClientsPage() {
 
       closeClientModals()
       toast.success('Cliente arquivado com sucesso.')
-      await loadClients()
+      await loadClients(Math.max(1, currentPage - (clients.length === 1 ? 1 : 0)), debouncedSearch)
     } catch (err) {
       if (err instanceof ApiError) {
         setModalError(err.message)
@@ -198,15 +224,11 @@ export function ClientsPage() {
     }))
   }
 
-  const filteredClients = useMemo(() => {
-    const term = search.trim().toLowerCase()
+  useEffect(() => {
+    setCurrentPage(1)
+  }, [debouncedSearch])
 
-    if (!term) return clients
-
-    return clients.filter((client) =>
-      [client.name, client.email, client.phone].some((value) => value.toLowerCase().includes(term)),
-    )
-  }, [clients, search])
+  const totalPages = Math.max(1, Math.ceil(totalFilteredClients / clientsPageSize))
 
   return (
     <>
@@ -221,11 +243,11 @@ export function ClientsPage() {
             <div className="hero-mini-stats quali-mini-stats">
               <div className="hero-mini-stats__item">
                 <strong>{clients.length}</strong>
-                <span>Clientes</span>
+                <span>Nesta pagina</span>
               </div>
               <div className="hero-mini-stats__item">
-                <strong>{filteredClients.length}</strong>
-                <span>Visiveis</span>
+                <strong>{totalClients}</strong>
+                <span>Total</span>
               </div>
             </div>
           </div>
@@ -240,8 +262,8 @@ export function ClientsPage() {
               </div>
 
               <div className="clients-toolbar__count">
-                <strong>{filteredClients.length}</strong>
-                <span>registros em tela</span>
+                <strong>{totalFilteredClients}</strong>
+                <span>resultados</span>
               </div>
             </div>
 
@@ -262,13 +284,37 @@ export function ClientsPage() {
 
             {!isLoading && !error ? (
               <div className="clients-list">
-                {filteredClients.length ? (
-                  filteredClients.map((client) => (
+                {clients.length ? (
+                  clients.map((client) => (
                     <ClientCard key={client.id} client={client} onEdit={openEditModal} onArchive={openArchiveModal} />
                   ))
                 ) : (
                   <p className="feedback">Nenhum cliente encontrado para o filtro atual.</p>
                 )}
+
+                {totalFilteredClients > clientsPageSize ? (
+                  <div className="list-pagination">
+                    <button
+                      type="button"
+                      className="ghost-page-button list-pagination__button"
+                      onClick={() => void loadClients(currentPage - 1, debouncedSearch)}
+                      disabled={currentPage === 1}
+                    >
+                      Anterior
+                    </button>
+                    <span className="list-pagination__status">
+                      Pagina {currentPage} de {totalPages}
+                    </span>
+                    <button
+                      type="button"
+                      className="ghost-page-button list-pagination__button"
+                      onClick={() => void loadClients(currentPage + 1, debouncedSearch)}
+                      disabled={currentPage === totalPages}
+                    >
+                      Proxima
+                    </button>
+                  </div>
+                ) : null}
               </div>
             ) : null}
           </article>
@@ -304,7 +350,7 @@ export function ClientsPage() {
         eyebrow="Cliente"
         title="Editar cadastro"
         description="Atualize os dados."
-        className="clients-modal"
+        className="clients-modal modal-card--edit"
       >
         <form className="clients-modal__form" onSubmit={handleEditSubmit}>
           <div className="clients-modal__grid">

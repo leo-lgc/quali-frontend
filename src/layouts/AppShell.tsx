@@ -1,4 +1,5 @@
-import { Bell, HardHat, MapPinned, Search, ShieldUser, Users } from 'lucide-react'
+import { Bell, ChevronLeft, ChevronRight, HardHat, MapPinned, Menu, Search, ShieldUser, Users, X } from 'lucide-react'
+import { useEffect, useState } from 'react'
 import { NavLink, Outlet, useLocation } from 'react-router-dom'
 import { useAuth } from '../features/auth/AuthContext'
 
@@ -11,18 +12,46 @@ const navigationItems = [
 export function AppShell() {
   const { logout } = useAuth()
   const location = useLocation()
+  const [isDesktop, setIsDesktop] = useState(() => (typeof window === 'undefined' ? true : window.innerWidth > 1080))
+  const [isSidebarOpen, setIsSidebarOpen] = useState(() => {
+    if (typeof window === 'undefined') return true
+    return window.innerWidth > 1080
+  })
+
+  useEffect(() => {
+    function handleResize() {
+      const nextIsDesktop = window.innerWidth > 1080
+      setIsDesktop(nextIsDesktop)
+      if (nextIsDesktop) {
+        setIsSidebarOpen(true)
+      } else {
+        setIsSidebarOpen(false)
+      }
+    }
+
+    window.addEventListener('resize', handleResize)
+    return () => window.removeEventListener('resize', handleResize)
+  }, [])
+
+  useEffect(() => {
+    if (window.innerWidth <= 1080) {
+      setIsSidebarOpen(false)
+    }
+  }, [location.pathname])
 
   const pageTitle = location.pathname.startsWith('/obras')
     ? 'Obras'
     : location.pathname.startsWith('/clientes')
       ? 'Clientes'
-      : location.pathname.startsWith('/equipe')
+    : location.pathname.startsWith('/equipe')
         ? 'Equipe'
       : 'Quali'
 
   return (
-    <div className="shell">
-      <aside className="shell__sidebar">
+    <div className={`shell ${isSidebarOpen ? 'shell--sidebar-open' : 'shell--sidebar-closed'}`.trim()}>
+      {isSidebarOpen ? <button type="button" className="shell__backdrop" onClick={() => setIsSidebarOpen(false)} aria-label="Fechar menu" /> : null}
+
+      <aside id="shell-sidebar" className={`shell__sidebar ${isSidebarOpen ? 'shell__sidebar--open' : ''}`.trim()}>
         <div className="shell__sidebar-top">
           <div className="shell__brand">
             <div className="shell__brand-mark">
@@ -46,12 +75,13 @@ export function AppShell() {
                   <NavLink
                     key={item.label}
                     to={item.to}
+                    onClick={() => setIsSidebarOpen(window.innerWidth > 1080)}
                     className={({ isActive }) =>
                       isActive ? 'shell__link shell__link--active' : 'shell__link'
                     }
                   >
                     <item.icon size={18} />
-                    {item.label}
+                    <span className="shell__link-label">{item.label}</span>
                   </NavLink>
                 ) : (
                   <div key={item.label} className="shell__link shell__link--disabled" aria-disabled="true">
@@ -74,7 +104,14 @@ export function AppShell() {
             </div>
           </div>
 
-          <button type="button" className="ghost-button" onClick={logout}>
+          <button
+            type="button"
+            className="ghost-button"
+            onClick={() => {
+              setIsSidebarOpen(false)
+              logout()
+            }}
+          >
             Sair
           </button>
         </div>
@@ -83,6 +120,17 @@ export function AppShell() {
       <main className="shell__content">
         <header className="topbar">
           <div className="topbar__leading">
+            <button
+              type="button"
+              className="icon-button shell__menu-toggle"
+              onClick={() => setIsSidebarOpen((current) => !current)}
+              aria-label={isSidebarOpen ? 'Fechar menu lateral' : 'Abrir menu lateral'}
+              aria-expanded={isSidebarOpen}
+              aria-controls="shell-sidebar"
+            >
+              {isDesktop ? (isSidebarOpen ? <ChevronLeft size={18} /> : <ChevronRight size={18} />) : isSidebarOpen ? <X size={18} /> : <Menu size={18} />}
+            </button>
+
             <div>
               <span className="eyebrow">Painel administrativo</span>
               <h1>{pageTitle}</h1>

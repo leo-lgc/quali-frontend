@@ -439,7 +439,7 @@ export function ConstructionsPage() {
     setModalError('')
 
     try {
-      await apiRequest(`/construction/delete/${selectedConstruction.id}`, {
+      await apiRequest(`/construction/soft/${selectedConstruction.id}`, {
         method: 'DELETE',
         token,
       })
@@ -665,7 +665,7 @@ export function ConstructionsPage() {
         eyebrow={modalMode === 'create' ? 'Nova obra' : 'Obra'}
         title={modalMode === 'create' ? 'Cadastrar obra' : 'Editar obra'}
         description={modalMode === 'create' ? 'Preencha os dados da obra.' : 'Atualize os dados da obra.'}
-        className="works-modal"
+        className={modalMode === 'edit' ? 'works-modal modal-card--edit' : 'works-modal'}
       >
         {isEditingLoading ? (
           <p className="feedback">Carregando dados da obra...</p>

@@ -12,7 +12,7 @@ type DetailModuleCardProps = {
   title: string
   description: string
   metric: ReactNode
-  actions: [DetailModuleAction, DetailModuleAction]
+  actions: DetailModuleAction[]
 }
 
 export function DetailModuleCard({ icon: Icon, title, description, metric, actions }: DetailModuleCardProps) {

@@ -1,4 +1,4 @@
-import { ArrowLeft, CalendarDays, Camera, ClipboardList, FileText, Hammer, Users } from 'lucide-react'
+import { ArrowLeft, Camera, ClipboardList, FileText, Hammer, Users } from 'lucide-react'
 import { useEffect, useMemo, useState, type ChangeEvent, type FormEvent } from 'react'
 import { Link, useParams } from 'react-router-dom'
 import { ChecklistModal } from '../components/construction-detail/ChecklistModal'
@@ -13,7 +13,6 @@ import { useAuth } from '../features/auth/AuthContext'
 
 type Status = 'SCHEDULED' | 'IN_PROGRESS' | 'COMPLETED'
 type Weather = 'SUNNY' | 'CLOUDY' | 'RAINY' | 'STORMY' | 'SNOWY' | 'WINDY'
-type TabKey = 'overview' | 'checklist'
 
 type ReportResponse = {
   id: number
@@ -95,7 +94,6 @@ export function ConstructionDetailPage() {
   const { constructionId } = useParams()
   const { token } = useAuth()
   const toast = useToast()
-  const [activeTab, setActiveTab] = useState<TabKey>('overview')
   const [isChecklistModalOpen, setIsChecklistModalOpen] = useState(false)
   const [isMaterialsModalOpen, setIsMaterialsModalOpen] = useState(false)
   const [isTeamModalOpen, setIsTeamModalOpen] = useState(false)
@@ -765,9 +763,6 @@ export function ConstructionDetailPage() {
           </div>
 
           <div className="key-links detail-key-links">
-            <button type="button" className="key-link" onClick={() => setActiveTab('overview')}>
-              Ver cronograma
-            </button>
             <button type="button" className="key-link" onClick={() => setIsPhotosModalOpen(true)}>
               Ver fotos
             </button>
@@ -785,19 +780,7 @@ export function ConstructionDetailPage() {
           description="Itens planejados."
           metric={`${checklistProgress.done} de ${checklistProgress.total} itens planejados`}
           actions={[
-            { label: 'Ver', onClick: () => setIsChecklistModalOpen(true) },
-            { label: 'Editar checklist', variant: 'secondary', onClick: () => setIsChecklistModalOpen(true) },
-          ]}
-        />
-
-        <DetailModuleCard
-          icon={CalendarDays}
-          title="Cronograma"
-          description="Prazos e etapas."
-          metric={`Prazo base ate ${formatShortDate(report.endDate)}`}
-          actions={[
-            { label: 'Ver', onClick: () => setActiveTab('overview') },
-            { label: 'Editar cronograma', variant: 'secondary', onClick: () => setActiveTab('overview') },
+            { label: 'Abrir checklist', variant: 'secondary', onClick: () => setIsChecklistModalOpen(true) },
           ]}
         />
 
@@ -807,8 +790,7 @@ export function ConstructionDetailPage() {
           description="Equipe alocada."
           metric={buildTeamMetric(report)}
           actions={[
-            { label: 'Ver', onClick: () => setIsTeamModalOpen(true) },
-            { label: 'Adicionar colaborador', variant: 'secondary', onClick: () => setIsTeamModalOpen(true) },
+            { label: 'Gerenciar equipe', variant: 'secondary', onClick: () => setIsTeamModalOpen(true) },
           ]}
         />
 
@@ -818,8 +800,7 @@ export function ConstructionDetailPage() {
           description="Itens da obra."
           metric={buildMaterialMetric(materials)}
           actions={[
-            { label: 'Ver', onClick: () => setIsMaterialsModalOpen(true) },
-            { label: 'Adicionar material', variant: 'secondary', onClick: () => setIsMaterialsModalOpen(true) },
+            { label: 'Gerenciar materiais', variant: 'secondary', onClick: () => setIsMaterialsModalOpen(true) },
           ]}
         />
 
@@ -829,8 +810,7 @@ export function ConstructionDetailPage() {
           description="Registros visuais."
           metric={photos.length ? `${photos.length} registros de campo` : 'Sem registros de campo'}
           actions={[
-            { label: 'Ver', onClick: () => setIsPhotosModalOpen(true) },
-            { label: 'Ver fotos', variant: 'secondary', onClick: () => setIsPhotosModalOpen(true) },
+            { label: 'Abrir fotos', variant: 'secondary', onClick: () => setIsPhotosModalOpen(true) },
           ]}
         />
 
@@ -840,39 +820,36 @@ export function ConstructionDetailPage() {
           description="Resumo da obra."
           metric={report.pictures.length ? `${report.pictures.length} fotos no report` : 'Reporte inicial para cliente pendente'}
           actions={[
-            { label: 'Ver', onClick: () => setActiveTab('overview') },
             { label: isGeneratingReport ? 'Gerando...' : 'Gerar PDF', variant: 'secondary', onClick: () => void handleGenerateReportPdf() },
           ]}
         />
       </section>
 
-      {activeTab === 'overview' ? (
-        <DetailInfoSection title="Panorama e contato" copy="Dados principais.">
-          <div className="detail-grid">
-            <article className="detail-card detail-card--soft">
-              <h3 className="panel__title">Cronograma base</h3>
-              <div className="key-value-list">
-                <div><span>Inicio</span><strong>{formatDate(report.startDate)}</strong></div>
-                <div><span>Fim previsto</span><strong>{formatDate(report.endDate)}</strong></div>
-                <div><span>Prazo acordado</span><strong>{report.agreedDeadLine} dias</strong></div>
-                <div><span>Dias corridos</span><strong>{report.daysElapsed}</strong></div>
-                <div><span>Atraso</span><strong>{report.overdueDays}</strong></div>
-              </div>
-            </article>
+      <DetailInfoSection title="Panorama e contato" copy="Dados principais.">
+        <div className="detail-grid">
+          <article className="detail-card detail-card--soft">
+            <h3 className="panel__title">Prazos da obra</h3>
+            <div className="key-value-list">
+              <div><span>Inicio</span><strong>{formatDate(report.startDate)}</strong></div>
+              <div><span>Fim previsto</span><strong>{formatDate(report.endDate)}</strong></div>
+              <div><span>Prazo acordado</span><strong>{report.agreedDeadLine} dias</strong></div>
+              <div><span>Dias corridos</span><strong>{report.daysElapsed}</strong></div>
+              <div><span>Atraso</span><strong>{report.overdueDays}</strong></div>
+            </div>
+          </article>
 
-            <article className="detail-card detail-card--soft">
-              <h3 className="panel__title">Cliente e endereco</h3>
-              <div className="key-value-list">
-                <div><span>Cliente</span><strong>{report.client.name}</strong></div>
-                <div><span>Telefone</span><strong>{report.client.phone}</strong></div>
-                <div><span>Email</span><strong>{report.client.email}</strong></div>
-                <div><span>Cidade</span><strong>{report.address.city}</strong></div>
-                <div><span>Endereco</span><strong>{formatAddress(report.address)}</strong></div>
-              </div>
-            </article>
-          </div>
-        </DetailInfoSection>
-      ) : null}
+          <article className="detail-card detail-card--soft">
+            <h3 className="panel__title">Cliente e endereco</h3>
+            <div className="key-value-list">
+              <div><span>Cliente</span><strong>{report.client.name}</strong></div>
+              <div><span>Telefone</span><strong>{report.client.phone}</strong></div>
+              <div><span>Email</span><strong>{report.client.email}</strong></div>
+              <div><span>Cidade</span><strong>{report.address.city}</strong></div>
+              <div><span>Endereco</span><strong>{formatAddress(report.address)}</strong></div>
+            </div>
+          </article>
+        </div>
+      </DetailInfoSection>
 
       <TeamModal
         isOpen={isTeamModalOpen}

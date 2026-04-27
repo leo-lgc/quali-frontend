@@ -1,4 +1,7 @@
+import { clearStoredToken } from './storage'
+
 const API_URL = import.meta.env.VITE_API_URL ?? 'http://localhost:8080'
+const AUTH_TOAST_EVENT = 'quali:auth-toast'
 
 type RequestOptions = {
   method?: 'GET' | 'POST' | 'PATCH' | 'PUT' | 'DELETE'
@@ -31,6 +34,23 @@ export async function apiRequest<T>(path: string, options: RequestOptions = {}) 
 
   if (!response.ok) {
     const message = await readErrorMessage(response)
+
+    if (options.token && shouldForceLogout(response.status, message)) {
+      clearStoredToken()
+
+      if (typeof window !== 'undefined' && window.location.pathname !== '/login') {
+        window.dispatchEvent(
+          new CustomEvent(AUTH_TOAST_EVENT, {
+            detail: {
+              variant: 'info',
+              message: 'Sessao expirada. Faca login novamente.',
+            },
+          }),
+        )
+        window.location.replace('/login')
+      }
+    }
+
     throw new ApiError(message, response.status)
   }
 
@@ -45,6 +65,20 @@ export async function apiRequest<T>(path: string, options: RequestOptions = {}) 
   }
 
   return (await response.text()) as T
+}
+
+function shouldForceLogout(status: number, message: string) {
+  if (status === 401) return true
+  if (status !== 403) return false
+
+  const normalizedMessage = message.toLowerCase()
+  return (
+    normalizedMessage.includes('jwt') ||
+    normalizedMessage.includes('token') ||
+    normalizedMessage.includes('expired') ||
+    normalizedMessage.includes('assinado') ||
+    normalizedMessage.includes('signature')
+  )
 }
 
 async function readErrorMessage(response: Response) {

@@ -54,15 +54,15 @@ export function ClientCard({ client, onEdit, onArchive }: ClientCardProps) {
       <div className="client-card__meta">
         <div>
           <span>Email</span>
-          <strong>
+          <a className="client-card__value-link" href={`mailto:${client.email}`}>
             <Mail size={14} /> {client.email}
-          </strong>
+          </a>
         </div>
         <div>
           <span>Telefone</span>
-          <strong>
+          <a className="client-card__value-link" href={`tel:${client.phone.replace(/\D/g, '')}`}>
             <Phone size={14} /> {client.phone}
-          </strong>
+          </a>
         </div>
       </div>
     </article>

@@ -36,7 +36,18 @@ type AuthProviderProps = {
 }
 
 export function AuthProvider({ children }: AuthProviderProps) {
-  const [token, setToken] = useState<string | null>(() => getStoredToken())
+  const [token, setToken] = useState<string | null>(() => {
+    const storedToken = getStoredToken()
+
+    if (!storedToken) return null
+
+    if (isTokenExpired(storedToken)) {
+      clearStoredToken()
+      return null
+    }
+
+    return storedToken
+  })
 
   const login = useCallback(async ({ email, password }: LoginPayload) => {
     const response = await apiRequest<LoginResponse>('/auth/login', {
@@ -67,6 +78,23 @@ export function AuthProvider({ children }: AuthProviderProps) {
   )
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>
+}
+
+function isTokenExpired(token: string) {
+  try {
+    const [, payloadPart] = token.split('.')
+    if (!payloadPart) return true
+
+    const payloadJson = atob(payloadPart.replace(/-/g, '+').replace(/_/g, '/'))
+    const payload = JSON.parse(payloadJson) as { exp?: number }
+
+    if (!payload.exp) return false
+
+    const nowInSeconds = Math.floor(Date.now() / 1000)
+    return payload.exp <= nowInSeconds
+  } catch {
+    return true
+  }
 }
 
 export function useAuth() {

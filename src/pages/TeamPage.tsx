@@ -14,12 +14,6 @@ type TeamUser = {
   role: Role
 }
 
-type ApiUser = {
-  id: number
-  name: string
-  email: string
-}
-
 type RegisterForm = {
   name: string
   email: string
@@ -29,9 +23,13 @@ type RegisterForm = {
 
 type PageResponse<T> = {
   content: T[]
+  totalElements: number
+  totalPages: number
+  number: number
 }
 
 const roleOrder: Role[] = ['ADMIN', 'MANAGER', 'USER']
+const teamPageSize = 8
 
 const initialRegisterForm: RegisterForm = {
   name: '',
@@ -46,6 +44,11 @@ export function TeamPage() {
 
   const [users, setUsers] = useState<TeamUser[]>([])
   const [search, setSearch] = useState('')
+  const [debouncedSearch, setDebouncedSearch] = useState('')
+  const [currentPage, setCurrentPage] = useState(1)
+  const [totalUsers, setTotalUsers] = useState(0)
+  const [totalFilteredUsers, setTotalFilteredUsers] = useState(0)
+  const [totalsByRole, setTotalsByRole] = useState({ ADMIN: 0, MANAGER: 0, USER: 0 })
   const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState('')
 
@@ -61,30 +64,34 @@ export function TeamPage() {
   const registerFieldError = useMemo(() => buildRegisterFieldError(registerError), [registerError])
 
   useEffect(() => {
-    void loadUsers()
-  }, [token])
+    const timeoutId = window.setTimeout(() => setDebouncedSearch(search.trim()), 250)
+    return () => window.clearTimeout(timeoutId)
+  }, [search])
 
-  async function loadUsers() {
+  useEffect(() => {
+    void loadUsers(1, debouncedSearch)
+    void loadRoleTotals()
+  }, [token, debouncedSearch])
+
+  async function loadUsers(page = currentPage, query = debouncedSearch) {
     setIsLoading(true)
     setError('')
 
     try {
-      const responses = await Promise.all(
-        roleOrder.map((role) => apiRequest<PageResponse<ApiUser>>(`/user/role/${role}`, { token })),
-      )
+      const params = new URLSearchParams({ page: String(page - 1), size: String(teamPageSize) })
+      if (query) params.set('query', query)
 
-      const mergedMap = new Map<number, TeamUser>()
-      for (let index = 0; index < responses.length; index += 1) {
-        const role = roleOrder[index]
-        for (const user of responses[index].content ?? []) {
-          if (!mergedMap.has(user.id)) {
-            mergedMap.set(user.id, { ...user, role })
-          }
-        }
+      const response = await apiRequest<PageResponse<TeamUser>>(`/user?${params.toString()}`, { token })
+      setUsers(response.content ?? [])
+      setCurrentPage(response.number + 1)
+      setTotalFilteredUsers(response.totalElements)
+
+      if (query) {
+        const totalResponse = await apiRequest<PageResponse<TeamUser>>(`/user?page=0&size=1`, { token })
+        setTotalUsers(totalResponse.totalElements)
+      } else {
+        setTotalUsers(response.totalElements)
       }
-
-      const mergedUsers = Array.from(mergedMap.values()).sort((a, b) => a.name.localeCompare(b.name, 'pt-BR'))
-      setUsers(mergedUsers)
     } catch (err) {
       if (err instanceof ApiError) {
         setError(err.message)
@@ -93,6 +100,22 @@ export function TeamPage() {
       }
     } finally {
       setIsLoading(false)
+    }
+  }
+
+  async function loadRoleTotals() {
+    try {
+      const responses = await Promise.all(
+        roleOrder.map((role) => apiRequest<PageResponse<TeamUser>>(`/user/role/${role}?page=0&size=1`, { token })),
+      )
+
+      setTotalsByRole({
+        ADMIN: responses[0].totalElements,
+        MANAGER: responses[1].totalElements,
+        USER: responses[2].totalElements,
+      })
+    } catch {
+      setTotalsByRole({ ADMIN: 0, MANAGER: 0, USER: 0 })
     }
   }
 
@@ -111,7 +134,7 @@ export function TeamPage() {
 
       setRegisterForm(initialRegisterForm)
       toast.success('Colaborador cadastrado com sucesso.')
-      await loadUsers()
+      await Promise.all([loadUsers(1, debouncedSearch), loadRoleTotals()])
     } catch (err) {
       if (err instanceof ApiError) {
         setRegisterError(err.message)
@@ -149,7 +172,7 @@ export function TeamPage() {
 
       closeArchiveModal()
       toast.success('Colaborador arquivado com sucesso.')
-      await loadUsers()
+      await Promise.all([loadUsers(Math.max(1, currentPage - (users.length === 1 ? 1 : 0)), debouncedSearch), loadRoleTotals()])
     } catch (err) {
       if (err instanceof ApiError) {
         setArchiveError(err.message)
@@ -161,25 +184,11 @@ export function TeamPage() {
     }
   }
 
-  const filteredUsers = useMemo(() => {
-    const term = search.trim().toLowerCase()
-    if (!term) return users
+  useEffect(() => {
+    setCurrentPage(1)
+  }, [debouncedSearch])
 
-    return users.filter((user) => {
-      const roleLabel = getRoleLabel(user.role).toLowerCase()
-      return [user.name, user.email, roleLabel].some((value) => value.toLowerCase().includes(term))
-    })
-  }, [users, search])
-
-  const totalsByRole = useMemo(() => {
-    return users.reduce(
-      (acc, user) => {
-        acc[user.role] += 1
-        return acc
-      },
-      { ADMIN: 0, MANAGER: 0, USER: 0 },
-    )
-  }, [users])
+  const totalPages = Math.max(1, Math.ceil(totalFilteredUsers / teamPageSize))
 
   return (
     <>
@@ -193,7 +202,7 @@ export function TeamPage() {
           <div className="works-hero__actions quali-works-actions">
             <div className="hero-mini-stats quali-mini-stats">
               <div className="hero-mini-stats__item">
-                <strong>{users.length}</strong>
+                <strong>{totalUsers}</strong>
                 <span>Total</span>
               </div>
               <div className="hero-mini-stats__item">
@@ -217,8 +226,8 @@ export function TeamPage() {
               </div>
 
               <div className="clients-toolbar__count">
-                <strong>{filteredUsers.length}</strong>
-                <span>registros em tela</span>
+                <strong>{totalFilteredUsers}</strong>
+                <span>resultados</span>
               </div>
             </div>
 
@@ -240,8 +249,8 @@ export function TeamPage() {
 
             {!isLoading && !error ? (
               <div className="team-directory-list">
-                {filteredUsers.length ? (
-                  filteredUsers.map((user) => (
+                {users.length ? (
+                  users.map((user) => (
                     <article key={user.id} className="team-directory-card">
                       <div className="team-directory-card__header">
                         <div className="team-directory-card__identity">
@@ -274,6 +283,30 @@ export function TeamPage() {
                 ) : (
                   <p className="feedback">Nenhum colaborador encontrado para o filtro atual.</p>
                 )}
+
+                {totalFilteredUsers > teamPageSize ? (
+                  <div className="list-pagination">
+                    <button
+                      type="button"
+                      className="ghost-page-button list-pagination__button"
+                      onClick={() => void loadUsers(currentPage - 1, debouncedSearch)}
+                      disabled={currentPage === 1}
+                    >
+                      Anterior
+                    </button>
+                    <span className="list-pagination__status">
+                      Pagina {currentPage} de {totalPages}
+                    </span>
+                    <button
+                      type="button"
+                      className="ghost-page-button list-pagination__button"
+                      onClick={() => void loadUsers(currentPage + 1, debouncedSearch)}
+                      disabled={currentPage === totalPages}
+                    >
+                      Proxima
+                    </button>
+                  </div>
+                ) : null}
               </div>
             ) : null}
           </article>
