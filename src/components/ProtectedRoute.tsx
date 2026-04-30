@@ -9,8 +9,6 @@ type ProtectedRouteProps = {
   redirectTo?: string
 }
 
-const APP_TOAST_EVENT = 'quali:auth-toast'
-
 export function ProtectedRoute({ children, allowedRoles, deniedMessage = 'Você não pode acessar esta tela.', redirectTo = '/obras' }: ProtectedRouteProps) {
   const { token, user } = useAuth()
   const location = useLocation()
@@ -22,7 +20,7 @@ export function ProtectedRoute({ children, allowedRoles, deniedMessage = 'Você 
   if (allowedRoles?.length && (!user?.role || !allowedRoles.includes(user.role))) {
     if (typeof window !== 'undefined') {
       window.dispatchEvent(
-        new CustomEvent(APP_TOAST_EVENT, {
+        new CustomEvent('quali:app-toast', {
           detail: {
             variant: 'error',
             message: deniedMessage,

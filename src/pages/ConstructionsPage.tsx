@@ -189,8 +189,13 @@ export function ConstructionsPage() {
   }, [search])
 
   useEffect(() => {
+    if (!canManageConstruction) {
+      setClients([])
+      return
+    }
+
     void loadClients()
-  }, [token])
+  }, [token, canManageConstruction])
 
   useEffect(() => {
     void loadBoardData(debouncedSearch)

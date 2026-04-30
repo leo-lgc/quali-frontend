@@ -1,7 +1,7 @@
 import { clearStoredToken } from './storage'
 
 const API_URL = import.meta.env.VITE_API_URL ?? 'http://localhost:8080'
-const AUTH_TOAST_EVENT = 'quali:auth-toast'
+const APP_TOAST_EVENT = 'quali:app-toast'
 
 type RequestOptions = {
   method?: 'GET' | 'POST' | 'PATCH' | 'PUT' | 'DELETE'
@@ -26,11 +26,17 @@ export async function apiRequest<T>(path: string, options: RequestOptions = {}) 
     headers.set('Authorization', `Bearer ${options.token}`)
   }
 
-  const response = await fetch(`${API_URL}${path}`, {
-    method: options.method ?? 'GET',
-    body: options.body,
-    headers,
-  })
+  let response: Response
+
+  try {
+    response = await fetch(`${API_URL}${path}`, {
+      method: options.method ?? 'GET',
+      body: options.body,
+      headers,
+    })
+  } catch {
+    throw new ApiError('Não foi possível conectar ao servidor. Tente novamente em instantes.', 0)
+  }
 
   if (!response.ok) {
     const message = await readErrorMessage(response)
@@ -39,16 +45,11 @@ export async function apiRequest<T>(path: string, options: RequestOptions = {}) 
       clearStoredToken()
 
       if (typeof window !== 'undefined' && window.location.pathname !== '/login') {
-        window.dispatchEvent(
-          new CustomEvent(AUTH_TOAST_EVENT, {
-            detail: {
-              variant: 'info',
-              message: 'Sessao expirada. Faca login novamente.',
-            },
-          }),
-        )
+        dispatchAppToast('info', 'Sessão expirada. Faça login novamente.')
         window.location.replace('/login')
       }
+    } else if (options.token && response.status === 403 && typeof window !== 'undefined') {
+      dispatchAppToast('error', message || 'Você não tem permissão para acessar este recurso.')
     }
 
     throw new ApiError(message, response.status)
@@ -65,6 +66,14 @@ export async function apiRequest<T>(path: string, options: RequestOptions = {}) 
   }
 
   return (await response.text()) as T
+}
+
+function dispatchAppToast(variant: 'success' | 'error' | 'info', message: string) {
+  window.dispatchEvent(
+    new CustomEvent(APP_TOAST_EVENT, {
+      detail: { variant, message },
+    }),
+  )
 }
 
 function shouldForceLogout(status: number, message: string) {

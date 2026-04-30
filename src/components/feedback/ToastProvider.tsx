@@ -24,7 +24,7 @@ type ToastContextValue = {
 }
 
 const TOAST_DURATION = 3500
-const AUTH_TOAST_EVENT = 'quali:auth-toast'
+const APP_TOAST_EVENT = 'quali:app-toast'
 
 const ToastContext = createContext<ToastContextValue | null>(null)
 
@@ -50,13 +50,13 @@ export function ToastProvider({ children }: PropsWithChildren) {
   )
 
   useEffect(() => {
-    function handleAuthToast(event: Event) {
+    function handleAppToast(event: Event) {
       const customEvent = event as CustomEvent<{ message?: string; variant?: ToastVariant }>
-      addToast(customEvent.detail?.variant ?? 'info', customEvent.detail?.message ?? 'Sessao expirada. Faca login novamente.')
+      addToast(customEvent.detail?.variant ?? 'info', customEvent.detail?.message ?? 'Sessão expirada. Faça login novamente.')
     }
 
-    window.addEventListener(AUTH_TOAST_EVENT, handleAuthToast)
-    return () => window.removeEventListener(AUTH_TOAST_EVENT, handleAuthToast)
+    window.addEventListener(APP_TOAST_EVENT, handleAppToast)
+    return () => window.removeEventListener(APP_TOAST_EVENT, handleAppToast)
   }, [addToast])
 
   return (
