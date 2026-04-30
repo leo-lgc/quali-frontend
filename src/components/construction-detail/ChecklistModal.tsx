@@ -58,7 +58,7 @@ export function ChecklistModal({
           <div>
             <h3 className="panel__title">Itens do checklist</h3>
             <p className="panel__copy">
-              {checklistProgress.done} de {checklistProgress.total} concluidos.
+              {checklistProgress.done} de {checklistProgress.total} concluídos.
             </p>
           </div>
           <span className="weather-pill">
@@ -68,7 +68,7 @@ export function ChecklistModal({
 
         {!checkListId ? (
           <div className="checklist-empty-state">
-            <p className="panel__copy">Checklist ainda nao criado.</p>
+            <p className="panel__copy">Checklist ainda não criado.</p>
             <button type="button" className="primary-button" onClick={onCreateChecklist} disabled={isCreatingChecklist}>
               {isCreatingChecklist ? 'Criando checklist...' : 'Criar checklist'}
             </button>
@@ -106,7 +106,7 @@ export function ChecklistModal({
                     onClick={() => onToggleChecklistItem(item.id)}
                   >
                     <Check size={16} />
-                    {item.checked ? 'Concluido' : 'Marcar'}
+                    {item.checked ? 'Concluído' : 'Marcar'}
                   </button>
                   <button type="button" className="ghost-page-button" onClick={() => onDeleteChecklistItem(item.id)}>
                     <Trash2 size={16} />
@@ -116,7 +116,7 @@ export function ChecklistModal({
               </article>
             ))
           ) : checkListId && !isChecklistLoading ? (
-            <p className="feedback">Ainda nao existem itens de checklist para esta obra.</p>
+            <p className="feedback">Ainda não existem itens de checklist para esta obra.</p>
           ) : null}
         </div>
       </div>

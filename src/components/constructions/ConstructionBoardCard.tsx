@@ -22,7 +22,7 @@ type ConstructionBoardCardProps = {
 
 const statusLabel: Record<ConstructionStatus, string> = {
   IN_PROGRESS: 'Em andamento',
-  SCHEDULED: 'Aguardando inicio',
+  SCHEDULED: 'Aguardando início',
   COMPLETED: 'Finalizada',
 }
 
@@ -122,5 +122,5 @@ function buildDeadlineText(item: Construction) {
     return `Prazo ${item.endDate}`
   }
 
-  return item.localContact?.trim() ? `Contato ${item.localContact}` : 'Prazo nao informado'
+  return item.localContact?.trim() ? `Contato ${item.localContact}` : 'Prazo não informado'
 }

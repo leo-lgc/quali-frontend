@@ -33,15 +33,15 @@ export function ConstructionAddressFields({
     <>
       <section className="modal-section modal-section--soft">
         <div className="modal-section__header">
-          <span className="panel__eyebrow">Endereco</span>
-          <p className="panel__copy">Endereco da obra.</p>
+          <span className="panel__eyebrow">Endereço</span>
+          <p className="panel__copy">Endereço da obra.</p>
         </div>
 
         <div className="works-form__grid">
           <label className="field field--full">
             <span>CEP</span>
             <input type="text" value={form.cep} onChange={(event) => onCepChange(event.target.value)} placeholder="Digite o CEP" required />
-            <small className="field-help">{isFetchingCep ? 'Buscando endereco...' : 'Preenchimento automatico via CEP.'}</small>
+            <small className="field-help">{isFetchingCep ? 'Buscando endereço...' : 'Preenchimento automático via CEP.'}</small>
             {cepError ? <small className="field-help field-help--error">{cepError}</small> : null}
           </label>
 
@@ -61,8 +61,8 @@ export function ConstructionAddressFields({
           </label>
 
           <label className="field">
-            <span>Numero</span>
-            <input type="number" value={form.number} onChange={(event) => onChange('number', event.target.value)} placeholder="Digite o numero" min="1" required />
+            <span>Número</span>
+            <input type="number" value={form.number} onChange={(event) => onChange('number', event.target.value)} placeholder="Digite o número" min="1" required />
           </label>
 
           <label className="field">
@@ -74,13 +74,13 @@ export function ConstructionAddressFields({
 
       <section className="modal-section">
         <div className="modal-section__header">
-          <span className="panel__eyebrow">Observacoes</span>
-          <p className="panel__copy">Observacoes gerais.</p>
+          <span className="panel__eyebrow">Observações</span>
+          <p className="panel__copy">Observações gerais.</p>
         </div>
 
         <label className="field">
-          <span>Comentarios</span>
-          <textarea className="textarea-field" value={form.comments} onChange={(event) => onChange('comments', event.target.value)} placeholder="Observacoes iniciais da obra" rows={4} />
+          <span>Comentários</span>
+          <textarea className="textarea-field" value={form.comments} onChange={(event) => onChange('comments', event.target.value)} placeholder="Observações iniciais da obra" rows={4} />
         </label>
       </section>
     </>

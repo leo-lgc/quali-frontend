@@ -33,9 +33,9 @@ export function LoginPage() {
       if (err instanceof ApiError) {
         setError(err.message)
       } else if (err instanceof TypeError) {
-        setError('Nao foi possivel conectar ao backend. Verifique se o backend esta rodando e liberando CORS.')
+        setError('Não foi possível conectar ao backend. Verifique se o backend está rodando e liberando CORS.')
       } else {
-        setError('Nao foi possivel entrar agora. Tente novamente.')
+        setError('Não foi possível entrar agora. Tente novamente.')
       }
     } finally {
       setIsSubmitting(false)
@@ -54,12 +54,12 @@ export function LoginPage() {
         </div>
 
         <p className="hero-copy hero-copy--wide">
-          Acesso rapido ao sistema.
+          Acesso rápido ao sistema.
         </p>
 
         <div className="hero-grid hero-grid--stacked">
           <article className="info-card info-card--soft">
-            <span className="info-card__value">Checklist tecnico</span>
+            <span className="info-card__value">Checklist técnico</span>
             <p>Checklist por obra.</p>
           </article>
           <article className="info-card info-card--soft">

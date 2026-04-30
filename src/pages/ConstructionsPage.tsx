@@ -119,15 +119,15 @@ const initialForm: ConstructionFormState = {
 }
 
 const statusLabel: Record<ConstructionStatus, string> = {
-  SCHEDULED: 'Aguardando inicio',
+  SCHEDULED: 'Aguardando início',
   IN_PROGRESS: 'Em andamento',
   COMPLETED: 'Finalizada',
 }
 
 const statusDescription: Record<ConstructionStatus, string> = {
-  IN_PROGRESS: 'Em execucao.',
+  IN_PROGRESS: 'Em execução.',
   SCHEDULED: 'Prontas para iniciar.',
-  COMPLETED: 'Ja concluidas.',
+  COMPLETED: 'Já concluídas.',
 }
 
 const statusAccentClass: Record<ConstructionStatus, string> = {
@@ -175,6 +175,7 @@ export function ConstructionsPage() {
   const [selectedWorkersIds, setSelectedWorkersIds] = useState<number[]>([])
   const [error, setError] = useState('')
   const [modalError, setModalError] = useState('')
+  const [clientFieldError, setClientFieldError] = useState('')
   const [cepError, setCepError] = useState('')
   const [form, setForm] = useState<ConstructionFormState>(initialForm)
 
@@ -239,7 +240,7 @@ export function ConstructionsPage() {
       if (err instanceof ApiError) {
         setError(err.message)
       } else {
-        setError('Nao foi possivel carregar as obras.')
+        setError('Não foi possível carregar as obras.')
       }
     } finally {
       setIsLoading(false)
@@ -288,7 +289,7 @@ export function ConstructionsPage() {
         [status]: {
           ...current[status],
           isLoading: false,
-          error: err instanceof ApiError ? err.message : 'Nao foi possivel carregar mais obras.',
+          error: err instanceof ApiError ? err.message : 'Não foi possível carregar mais obras.',
         },
       }))
     }
@@ -339,7 +340,7 @@ export function ConstructionsPage() {
       if (err instanceof ApiError) {
         setModalError(err.message)
       } else {
-        setModalError('Nao foi possivel carregar os dados da obra para edicao.')
+        setModalError('Não foi possível carregar os dados da obra para edição.')
       }
     } finally {
       setIsEditingLoading(false)
@@ -360,14 +361,34 @@ export function ConstructionsPage() {
     setSelectedWorkersIds([])
     setModalStep('details')
     setModalError('')
+    setClientFieldError('')
     setCepError('')
     setForm(initialForm)
+  }
+
+  function handleContinueToAddress() {
+    if (!form.clientId) {
+      setClientFieldError('Selecione um cliente para continuar.')
+      setModalError('')
+      return
+    }
+
+    setClientFieldError('')
+    setModalStep('address')
   }
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault()
     setIsSubmitting(true)
     setModalError('')
+    setClientFieldError('')
+
+    if (!form.clientId) {
+      setIsSubmitting(false)
+      setClientFieldError('Selecione um cliente para continuar.')
+      setModalStep('details')
+      return
+    }
 
     const payload = {
       name: form.name,
@@ -425,7 +446,7 @@ export function ConstructionsPage() {
       if (err instanceof ApiError) {
         setModalError(err.message)
       } else {
-        setModalError(modalMode === 'create' ? 'Nao foi possivel cadastrar a obra.' : 'Nao foi possivel atualizar a obra.')
+        setModalError(modalMode === 'create' ? 'Não foi possível cadastrar a obra.' : 'Não foi possível atualizar a obra.')
       }
     } finally {
       setIsSubmitting(false)
@@ -451,7 +472,7 @@ export function ConstructionsPage() {
       if (err instanceof ApiError) {
         setModalError(err.message)
       } else {
-        setModalError('Nao foi possivel arquivar a obra.')
+        setModalError('Não foi possível arquivar a obra.')
       }
     } finally {
       setIsArchiving(false)
@@ -481,7 +502,7 @@ export function ConstructionsPage() {
       }
 
       if (data.erro) {
-        setCepError('CEP nao encontrado.')
+        setCepError('CEP não encontrado.')
         return
       }
 
@@ -494,13 +515,17 @@ export function ConstructionsPage() {
         complement: data.complemento || current.complement,
       }))
     } catch {
-      setCepError('Nao foi possivel buscar o CEP agora.')
+      setCepError('Não foi possível buscar o CEP agora.')
     } finally {
       setIsFetchingCep(false)
     }
   }
 
   function handleFormChange(field: keyof ConstructionFormState, value: string) {
+    if (field === 'clientId') {
+      setClientFieldError('')
+    }
+
     setForm((current) => ({
       ...current,
       [field]: value,
@@ -678,7 +703,7 @@ export function ConstructionsPage() {
               </div>
               <div className={modalStep === 'address' ? 'stepper__item stepper__item--active' : 'stepper__item'}>
                 <span>2</span>
-                <strong>Endereco e observacoes</strong>
+                <strong>Endereço e observações</strong>
               </div>
             </div>
 
@@ -690,7 +715,7 @@ export function ConstructionsPage() {
                     <p className="panel__copy">Dados da obra.</p>
                   </div>
 
-                  <ConstructionDetailsFields form={form} clients={clients} onChange={handleFormChange} />
+                  <ConstructionDetailsFields form={form} clients={clients} clientError={clientFieldError} onChange={handleFormChange} />
                 </section>
               ) : (
                 <div className="works-form__stack">
@@ -699,20 +724,20 @@ export function ConstructionsPage() {
               )}
             </div>
 
-            {modalError ? <p className="form-error">{modalError}</p> : null}
+            {modalError ? <div className="works-form__feedback"><p className="form-error">{modalError}</p></div> : null}
 
-            <div className="modal-card__actions">
+            <div className="modal-card__actions works-form__actions">
               <button type="button" className="ghost-page-button" onClick={() => modalStep === 'details' ? closeWorkModals() : setModalStep('details')}>
                 {modalStep === 'details' ? 'Cancelar' : 'Voltar'}
               </button>
 
               {modalStep === 'details' ? (
-                <button type="button" className="primary-button" onClick={() => setModalStep('address')}>
+                <button type="button" className="primary-button" onClick={handleContinueToAddress}>
                   Continuar
                 </button>
               ) : (
                 <button type="submit" className="primary-button" disabled={isSubmitting || isFetchingCep}>
-                  {isSubmitting ? 'Salvando...' : modalMode === 'create' ? 'Cadastrar obra' : 'Salvar alteracoes'}
+                  {isSubmitting ? 'Salvando...' : modalMode === 'create' ? 'Cadastrar obra' : 'Salvar alterações'}
                 </button>
               )}
             </div>
@@ -726,7 +751,7 @@ export function ConstructionsPage() {
         onConfirm={() => void handleArchiveConstruction()}
         eyebrow="Obra"
         title="Arquivar obra"
-        description="A obra saira da lista principal."
+        description="A obra sairá da lista principal."
         confirmLabel="Confirmar arquivamento"
         isSubmitting={isArchiving}
         error={modalError}
@@ -735,7 +760,7 @@ export function ConstructionsPage() {
             <>
               <strong>{selectedConstruction.name}</strong>
               <span>{statusLabel[selectedConstruction.status]}</span>
-              <span>Historico mantido.</span>
+              <span>Histórico mantido.</span>
             </>
           ) : null
         }

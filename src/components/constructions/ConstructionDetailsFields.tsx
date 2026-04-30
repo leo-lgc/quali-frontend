@@ -22,10 +22,11 @@ type ConstructionFormState = {
 type ConstructionDetailsFieldsProps = {
   form: ConstructionFormState
   clients: ClientOption[]
+  clientError?: string
   onChange: (field: keyof ConstructionFormState, value: string) => void
 }
 
-export function ConstructionDetailsFields({ form, clients, onChange }: ConstructionDetailsFieldsProps) {
+export function ConstructionDetailsFields({ form, clients, clientError = '', onChange }: ConstructionDetailsFieldsProps) {
   return (
     <div className="works-form__grid">
       <label className="field">
@@ -35,17 +36,24 @@ export function ConstructionDetailsFields({ form, clients, onChange }: Construct
 
       <label className="field">
         <span>Contato local</span>
-        <input type="text" value={form.localContact} onChange={(event) => onChange('localContact', event.target.value)} placeholder="Digite o responsavel local" required />
+        <input type="text" value={form.localContact} onChange={(event) => onChange('localContact', event.target.value)} placeholder="Digite o responsável local" required />
       </label>
 
-      <label className="field">
+      <label className="field field--client-select">
         <span>Cliente</span>
-        <select className="select-field" value={form.clientId} onChange={(event) => onChange('clientId', event.target.value)} required>
+        <select
+          className={clientError ? 'select-field input-error' : 'select-field'}
+          value={form.clientId}
+          onChange={(event) => onChange('clientId', event.target.value)}
+          aria-invalid={Boolean(clientError)}
+          required
+        >
           <option value="">Selecione um cliente</option>
           {clients.map((client) => (
             <option key={client.id} value={client.id}>{client.name}</option>
           ))}
         </select>
+        {clientError ? <small className="field-help field-help--error">{clientError}</small> : null}
       </label>
 
       <label className="field">
@@ -54,7 +62,7 @@ export function ConstructionDetailsFields({ form, clients, onChange }: Construct
       </label>
 
       <label className="field">
-        <span>Data de inicio</span>
+        <span>Data de início</span>
         <input type="date" value={form.startDate} onChange={(event) => onChange('startDate', event.target.value)} required />
       </label>
 

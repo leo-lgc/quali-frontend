@@ -86,9 +86,9 @@ async function readErrorMessage(response: Response) {
 
   if (contentType.includes('application/json')) {
     const data = (await response.json()) as { message?: string; error?: string }
-    return data.message ?? data.error ?? 'Nao foi possivel concluir a requisicao.'
+    return data.message ?? data.error ?? 'Não foi possível concluir a requisição.'
   }
 
   const text = await response.text()
-  return text || 'Nao foi possivel concluir a requisicao.'
+  return text || 'Não foi possível concluir a requisição.'
 }

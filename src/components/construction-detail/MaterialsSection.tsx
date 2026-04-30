@@ -97,7 +97,7 @@ export function MaterialsSection({
                   <div className="material-row__meta">
                     <span className="weather-pill">Qtd: {formatAmount(material.amount)}</span>
                     <span className={material.isAvailable ? 'status-pill status-pill--completed' : 'status-pill status-pill--scheduled'}>
-                      {material.isAvailable ? 'Disponivel' : 'Indisponivel'}
+                      {material.isAvailable ? 'Disponível' : 'Indisponível'}
                     </span>
                     <div className="material-row__actions">
                       <button

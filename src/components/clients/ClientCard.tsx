@@ -48,7 +48,7 @@ export function ClientCard({ client, onEdit, onArchive }: ClientCardProps) {
 
       <div className="client-card__content">
         <h3>{client.name}</h3>
-        <p>Contato disponivel.</p>
+        <p>Contato disponível.</p>
       </div>
 
       <div className="client-card__meta">

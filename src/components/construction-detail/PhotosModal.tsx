@@ -96,7 +96,7 @@ export function PhotosModal({
             <small className="field-help photos-upload-form__help">Selecione uma imagem para enviar.</small>
 
             <label className="field photos-upload-form__description">
-              <span>Descricao</span>
+              <span>Descrição</span>
               <input
                 type="text"
                 value={photoDescription}
@@ -128,7 +128,7 @@ export function PhotosModal({
                   <div className="photo-card__body">
                     <strong>Foto #{photo.id}</strong>
                     <span>{formatDate(photo.uploadDate)}</span>
-                    <p>{photo.description || 'Sem descricao cadastrada.'}</p>
+                    <p>{photo.description || 'Sem descrição cadastrada.'}</p>
                   </div>
                   <div className="photos-modal__actions">
                     <button
@@ -148,7 +148,7 @@ export function PhotosModal({
         ) : (
           <div className="photos-empty-state">
             <strong>Nenhuma foto cadastrada.</strong>
-            <span>Envie a primeira imagem para registrar a evolucao da obra.</span>
+            <span>Envie a primeira imagem para registrar a evolução da obra.</span>
             <Camera size={18} />
           </div>
         )}

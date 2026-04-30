@@ -58,7 +58,7 @@ type CheckListItem = {
 type CheckList = {
   id: number
   constructionId: number
-  items: CheckListItem[]
+  items: Array<CheckListItem & { checkList?: number }>
 }
 
 type Material = {
@@ -85,7 +85,7 @@ type MaterialFormState = {
 }
 
 const statusLabel: Record<Status, string> = {
-  SCHEDULED: 'Aguardando inicio',
+  SCHEDULED: 'Aguardando início',
   IN_PROGRESS: 'Em andamento',
   COMPLETED: 'Finalizada',
 }
@@ -112,6 +112,7 @@ export function ConstructionDetailPage() {
   const [isPhotoUploading, setIsPhotoUploading] = useState(false)
   const [photoDeleteId, setPhotoDeleteId] = useState<number | null>(null)
   const [isGeneratingReport, setIsGeneratingReport] = useState(false)
+  const [isUpdatingStatus, setIsUpdatingStatus] = useState(false)
   const [photosError, setPhotosError] = useState('')
   const [selectedPhotoFile, setSelectedPhotoFile] = useState<File | null>(null)
   const [selectedPhotoPreviewUrl, setSelectedPhotoPreviewUrl] = useState('')
@@ -128,7 +129,7 @@ export function ConstructionDetailPage() {
   useEffect(() => {
     async function loadData() {
       if (!constructionId) {
-        setError('Obra nao encontrada.')
+        setError('Obra não encontrada.')
         setIsLoading(false)
         return
       }
@@ -148,7 +149,7 @@ export function ConstructionDetailPage() {
           pictures: reportResponse.pictures ?? [],
           workers: reportResponse.workers ?? [],
           client: reportResponse.client ?? {
-            name: 'Cliente nao informado',
+            name: 'Cliente não informado',
             phone: '-',
             email: '-',
           },
@@ -162,7 +163,7 @@ export function ConstructionDetailPage() {
         if (err instanceof ApiError) {
           setError(err.message)
         } else {
-          setError('Nao foi possivel carregar os detalhes da obra.')
+          setError('Não foi possível carregar os detalhes da obra.')
         }
       } finally {
         setIsLoading(false)
@@ -182,7 +183,13 @@ export function ConstructionDetailPage() {
       })
 
       setCheckListId(checkListResponse.id)
-      setChecklistItems(checkListResponse.items ?? [])
+      setChecklistItems(
+        (checkListResponse.items ?? []).map((item) => ({
+          id: item.id,
+          title: item.title,
+          checked: Boolean(item.checked),
+        })),
+      )
     } catch (err) {
       if (err instanceof ApiError && err.status === 404) {
         setCheckListId(null)
@@ -193,7 +200,7 @@ export function ConstructionDetailPage() {
       if (err instanceof ApiError) {
         setChecklistError(err.message)
       } else {
-        setChecklistError('Nao foi possivel carregar o checklist.')
+        setChecklistError('Não foi possível carregar o checklist.')
       }
     } finally {
       setIsChecklistLoading(false)
@@ -223,7 +230,7 @@ export function ConstructionDetailPage() {
         pictures: reportResponse.pictures ?? [],
         workers: reportResponse.workers ?? [],
         client: reportResponse.client ?? {
-          name: 'Cliente nao informado',
+          name: 'Cliente não informado',
           phone: '-',
           email: '-',
         },
@@ -231,7 +238,7 @@ export function ConstructionDetailPage() {
         overdueDays: reportResponse.overdueDays ?? 0,
       })
     } catch {
-      toast.error('Nao foi possivel recarregar os dados da obra.')
+      toast.error('Não foi possível recarregar os dados da obra.')
     }
   }
 
@@ -248,12 +255,18 @@ export function ConstructionDetailPage() {
       })
 
       setCheckListId(response.id)
-      setChecklistItems(response.items ?? [])
+      setChecklistItems(
+        (response.items ?? []).map((item) => ({
+          id: item.id,
+          title: item.title,
+          checked: Boolean(item.checked),
+        })),
+      )
     } catch (err) {
       if (err instanceof ApiError) {
         setChecklistError(err.message)
       } else {
-        setChecklistError('Nao foi possivel criar o checklist.')
+        setChecklistError('Não foi possível criar o checklist.')
       }
     } finally {
       setIsCreatingChecklist(false)
@@ -276,13 +289,20 @@ export function ConstructionDetailPage() {
         body: JSON.stringify({ title: newChecklistItem.trim() }),
       })
 
-      setChecklistItems((current) => [...current, createdItem])
+      setChecklistItems((current) => [
+        ...current,
+        {
+          id: createdItem.id,
+          title: createdItem.title,
+          checked: Boolean(createdItem.checked),
+        },
+      ])
       setNewChecklistItem('')
     } catch (err) {
       if (err instanceof ApiError) {
         setChecklistError(err.message)
       } else {
-        setChecklistError('Nao foi possivel criar o item.')
+        setChecklistError('Não foi possível criar o item.')
       }
     } finally {
       setIsCreatingItem(false)
@@ -293,17 +313,19 @@ export function ConstructionDetailPage() {
     setChecklistError('')
 
     try {
-      const updatedItem = await apiRequest<CheckListItem>(`/checklist/item/${itemId}`, {
+      await apiRequest(`/checklist/item/${itemId}`, {
         method: 'PATCH',
         token,
       })
 
-      setChecklistItems((current) => current.map((item) => (item.id === itemId ? updatedItem : item)))
+      setChecklistItems((current) =>
+        current.map((item) => (item.id === itemId ? { ...item, checked: !item.checked } : item)),
+      )
     } catch (err) {
       if (err instanceof ApiError) {
         setChecklistError(err.message)
       } else {
-        setChecklistError('Nao foi possivel atualizar o item.')
+        setChecklistError('Não foi possível atualizar o item.')
       }
     }
   }
@@ -322,7 +344,7 @@ export function ConstructionDetailPage() {
       if (err instanceof ApiError) {
         setChecklistError(err.message)
       } else {
-        setChecklistError('Nao foi possivel excluir o item.')
+        setChecklistError('Não foi possível excluir o item.')
       }
     }
   }
@@ -354,7 +376,7 @@ export function ConstructionDetailPage() {
       if (err instanceof ApiError) {
         setMaterialsError(err.message)
       } else {
-        setMaterialsError('Nao foi possivel adicionar o material.')
+        setMaterialsError('Não foi possível adicionar o material.')
       }
     } finally {
       setIsMaterialSubmitting(false)
@@ -379,7 +401,7 @@ export function ConstructionDetailPage() {
       if (err instanceof ApiError) {
         setMaterialsError(err.message)
       } else {
-        setMaterialsError('Nao foi possivel atualizar a quantidade.')
+        setMaterialsError('Não foi possível atualizar a quantidade.')
       }
     } finally {
       setMaterialActionId(null)
@@ -404,7 +426,7 @@ export function ConstructionDetailPage() {
       if (err instanceof ApiError) {
         setMaterialsError(err.message)
       } else {
-        setMaterialsError('Nao foi possivel atualizar a quantidade.')
+        setMaterialsError('Não foi possível atualizar a quantidade.')
       }
     } finally {
       setMaterialActionId(null)
@@ -429,7 +451,7 @@ export function ConstructionDetailPage() {
       if (err instanceof ApiError) {
         setMaterialsError(err.message)
       } else {
-        setMaterialsError('Nao foi possivel remover o material.')
+        setMaterialsError('Não foi possível remover o material.')
       }
     } finally {
       setMaterialActionId(null)
@@ -475,7 +497,7 @@ export function ConstructionDetailPage() {
       if (err instanceof ApiError) {
         setMaterialsError(err.message)
       } else {
-        setMaterialsError('Nao foi possivel atualizar o material.')
+        setMaterialsError('Não foi possível atualizar o material.')
       }
     } finally {
       setMaterialActionId(null)
@@ -528,7 +550,7 @@ export function ConstructionDetailPage() {
       if (err instanceof ApiError) {
         setPhotosError(err.message)
       } else {
-        setPhotosError('Nao foi possivel enviar a foto.')
+        setPhotosError('Não foi possível enviar a foto.')
       }
     } finally {
       setIsPhotoUploading(false)
@@ -553,7 +575,7 @@ export function ConstructionDetailPage() {
       if (err instanceof ApiError) {
         setPhotosError(err.message)
       } else {
-        setPhotosError('Nao foi possivel excluir a foto.')
+        setPhotosError('Não foi possível excluir a foto.')
       }
     } finally {
       setPhotoDeleteId(null)
@@ -601,10 +623,11 @@ export function ConstructionDetailPage() {
         dateStyle: 'short',
         timeStyle: 'short',
       }).format(new Date())
+      const photoItems = photos.slice(0, 4)
 
       doc.setFont('helvetica', 'bold')
       doc.setFontSize(18)
-      doc.text(`Relatorio da obra - ${report.name}`, 40, 46)
+      doc.text(`Relatório da obra - ${report.name}`, 40, 46)
       doc.setFont('helvetica', 'normal')
       doc.setFontSize(10)
       doc.text(`Gerado em ${generatedAt}`, 40, 64)
@@ -619,7 +642,7 @@ export function ConstructionDetailPage() {
           ['Cliente', report.client.name],
           ['Contato local', report.localContact || '-'],
           ['Equipe', `${report.workers.length} colaboradores`],
-          ['Inicio', formatDate(report.startDate)],
+          ['Início', formatDate(report.startDate)],
           ['Fim previsto', formatDate(report.endDate)],
           ['Prazo acordado', `${report.agreedDeadLine} dias`],
           ['Dias corridos', String(report.daysElapsed)],
@@ -636,7 +659,7 @@ export function ConstructionDetailPage() {
 
       autoTable(doc, {
         startY: cursorY,
-        head: [['Endereco', 'Telefone', 'Email']],
+        head: [['Endereço', 'Telefone', 'Email']],
         body: [[formatAddress(report.address), report.client.phone || '-', report.client.email || '-']],
         theme: 'grid',
         headStyles: { fillColor: [53, 81, 107], textColor: [255, 255, 255] },
@@ -647,9 +670,9 @@ export function ConstructionDetailPage() {
 
       autoTable(doc, {
         startY: cursorY,
-        head: [['Materiais', 'Quantidade', 'Disponivel']],
+        head: [['Materiais', 'Quantidade', 'Disponível']],
         body: materials.length
-          ? materials.map((material) => [material.name, formatMaterialAmount(material.amount), material.isAvailable ? 'Sim' : 'Nao'])
+          ? materials.map((material) => [material.name, formatMaterialAmount(material.amount), material.isAvailable ? 'Sim' : 'Não'])
           : [['Sem materiais cadastrados', '-', '-']],
         theme: 'grid',
         headStyles: { fillColor: [53, 81, 107], textColor: [255, 255, 255] },
@@ -662,12 +685,61 @@ export function ConstructionDetailPage() {
         startY: cursorY,
         head: [['Checklist', 'Status']],
         body: checklistItems.length
-          ? checklistItems.map((item) => [item.title, item.checked ? 'Concluido' : 'Pendente'])
+          ? checklistItems.map((item) => [item.title, item.checked ? 'Concluído' : 'Pendente'])
           : [['Sem checklist cadastrado', '-']],
         theme: 'grid',
         headStyles: { fillColor: [53, 81, 107], textColor: [255, 255, 255] },
         styles: { fontSize: 9, cellPadding: 6 },
       })
+
+      cursorY = ((doc as { lastAutoTable?: { finalY?: number } }).lastAutoTable?.finalY ?? cursorY) + 18
+
+      if (photoItems.length) {
+        if (cursorY > 660) {
+          doc.addPage()
+          cursorY = 48
+        }
+
+        doc.setFont('helvetica', 'bold')
+        doc.setFontSize(13)
+        doc.text('Fotos da obra', 40, cursorY)
+        cursorY += 18
+
+        const photoWidth = 240
+        const photoHeight = 150
+        const photoGap = 24
+
+        for (let index = 0; index < photoItems.length; index += 1) {
+          const photo = photoItems[index]
+          if (index > 0 && index % 2 === 0) {
+            cursorY += photoHeight + 58
+          }
+
+          if (cursorY + photoHeight + 58 > 760) {
+            doc.addPage()
+            cursorY = 48
+          }
+
+          const x = 40 + (index % 2) * (photoWidth + photoGap)
+          const imageData = await loadPhotoAsDataUrl(resolvePhotoUrl(photo.url))
+          if (imageData) {
+            doc.addImage(imageData, detectImageFormat(imageData), x, cursorY, photoWidth, photoHeight)
+          } else {
+            doc.setDrawColor(210, 220, 231)
+            doc.rect(x, cursorY, photoWidth, photoHeight)
+            doc.setFont('helvetica', 'normal')
+            doc.setFontSize(10)
+            doc.text('Imagem indisponível', x + 12, cursorY + 22)
+          }
+
+          doc.setFont('helvetica', 'bold')
+          doc.setFontSize(10)
+          doc.text(`Foto ${index + 1}`, x, cursorY + photoHeight + 18)
+          doc.setFont('helvetica', 'normal')
+          doc.setFontSize(9)
+          doc.text(photo.description || 'Sem descrição cadastrada.', x, cursorY + photoHeight + 34, { maxWidth: photoWidth })
+        }
+      }
 
       const sanitizedName = report.name
         .normalize('NFD')
@@ -679,9 +751,33 @@ export function ConstructionDetailPage() {
       doc.save(`reporte-${sanitizedName || report.id}.pdf`)
       toast.success('Reporte em PDF gerado com sucesso.')
     } catch {
-      toast.error('Nao foi possivel gerar o PDF do reporte.')
+      toast.error('Não foi possível gerar o PDF do reporte.')
     } finally {
       setIsGeneratingReport(false)
+    }
+  }
+
+  async function handleStatusChange(nextStatus: Status) {
+    if (!constructionId || !report || nextStatus === report.status || isUpdatingStatus) return
+
+    setIsUpdatingStatus(true)
+
+    try {
+      await apiRequest(`/construction/status/${constructionId}/${nextStatus}`, {
+        method: 'PATCH',
+        token,
+      })
+
+      setReport((current) => (current ? { ...current, status: nextStatus } : current))
+      toast.success('Status da obra atualizado com sucesso.')
+    } catch (err) {
+      if (err instanceof ApiError) {
+        setError(err.message)
+      } else {
+        setError('Não foi possível atualizar o status da obra.')
+      }
+    } finally {
+      setIsUpdatingStatus(false)
     }
   }
 
@@ -695,7 +791,7 @@ export function ConstructionDetailPage() {
         <Link to="/obras" className="back-link">
           Voltar para obras
         </Link>
-        <p className="form-error">{error || 'Obra nao encontrada.'}</p>
+          <p className="form-error">{error || 'Obra não encontrada.'}</p>
       </div>
     )
   }
@@ -710,7 +806,7 @@ export function ConstructionDetailPage() {
           </Link>
           <span className="hero-panel__date">Obra selecionada</span>
           <h2>{report.name}</h2>
-          <p>Visao geral da obra.</p>
+          <p>Visão geral da obra.</p>
         </div>
 
         <div className="work-hub-hero__summary">
@@ -724,7 +820,7 @@ export function ConstructionDetailPage() {
           </div>
           <div className="summary-chip summary-chip--wide">
             <strong>Prazo em {formatShortDate(report.endDate)}</strong>
-            <span>proximo marco</span>
+            <span>próximo marco</span>
           </div>
         </div>
       </section>
@@ -736,7 +832,19 @@ export function ConstructionDetailPage() {
               <span className="panel__eyebrow">Resumo da obra</span>
               <h3>{buildStatusHeadline(report)}</h3>
             </div>
-            <span className="work-status-pill">{statusLabel[report.status]}</span>
+            <div className="detail-status-controls">
+              <span className="work-status-pill">{statusLabel[report.status]}</span>
+              <label className="detail-status-select">
+                <span className="sr-only">Alterar status da obra</span>
+                <select value={report.status} onChange={(event) => void handleStatusChange(event.target.value as Status)} disabled={isUpdatingStatus}>
+                  {Object.entries(statusLabel).map(([value, label]) => (
+                    <option key={value} value={value}>
+                      {label}
+                    </option>
+                  ))}
+                </select>
+              </label>
+            </div>
           </div>
 
           <div className="work-overview-card__metrics detail-summary-metrics">
@@ -745,7 +853,7 @@ export function ConstructionDetailPage() {
               <strong>{report.address.neighborhood || report.address.city}</strong>
             </div>
             <div>
-              <span>Responsavel</span>
+              <span>Responsável</span>
               <strong>{report.localContact}</strong>
             </div>
             <div>
@@ -818,7 +926,7 @@ export function ConstructionDetailPage() {
           icon={FileText}
           title="Reporte"
           description="Resumo da obra."
-          metric={report.pictures.length ? `${report.pictures.length} fotos no report` : 'Reporte inicial para cliente pendente'}
+              metric={report.pictures.length ? `${report.pictures.length} fotos no report` : 'Reporte inicial para cliente pendente'}
           actions={[
             { label: isGeneratingReport ? 'Gerando...' : 'Gerar PDF', variant: 'secondary', onClick: () => void handleGenerateReportPdf() },
           ]}
@@ -830,7 +938,7 @@ export function ConstructionDetailPage() {
           <article className="detail-card detail-card--soft">
             <h3 className="panel__title">Prazos da obra</h3>
             <div className="key-value-list">
-              <div><span>Inicio</span><strong>{formatDate(report.startDate)}</strong></div>
+              <div><span>Início</span><strong>{formatDate(report.startDate)}</strong></div>
               <div><span>Fim previsto</span><strong>{formatDate(report.endDate)}</strong></div>
               <div><span>Prazo acordado</span><strong>{report.agreedDeadLine} dias</strong></div>
               <div><span>Dias corridos</span><strong>{report.daysElapsed}</strong></div>
@@ -839,13 +947,13 @@ export function ConstructionDetailPage() {
           </article>
 
           <article className="detail-card detail-card--soft">
-            <h3 className="panel__title">Cliente e endereco</h3>
+            <h3 className="panel__title">Cliente e endereço</h3>
             <div className="key-value-list">
               <div><span>Cliente</span><strong>{report.client.name}</strong></div>
               <div><span>Telefone</span><strong>{report.client.phone}</strong></div>
               <div><span>Email</span><strong>{report.client.email}</strong></div>
               <div><span>Cidade</span><strong>{report.address.city}</strong></div>
-              <div><span>Endereco</span><strong>{formatAddress(report.address)}</strong></div>
+              <div><span>Endereço</span><strong>{formatAddress(report.address)}</strong></div>
             </div>
           </article>
         </div>
@@ -938,9 +1046,9 @@ function formatAddress(address: ReportResponse['address']) {
 }
 
 function buildStatusHeadline(report: ReportResponse) {
-  if (report.status === 'COMPLETED') return 'Entrega concluida'
-  if (report.status === 'SCHEDULED') return 'Mobilizacao inicial'
-  return 'Frente em execucao'
+  if (report.status === 'COMPLETED') return 'Entrega concluída'
+  if (report.status === 'SCHEDULED') return 'Mobilização inicial'
+  return 'Frente em execução'
 }
 
 function buildAlertText(report: ReportResponse) {
@@ -951,11 +1059,11 @@ function buildAlertText(report: ReportResponse) {
 
 function buildTeamMetric(report: ReportResponse) {
   if (report.workers.length) return `${report.workers.length} colaboradores vinculados`
-  return 'Equipe base ainda nao vinculada'
+  return 'Equipe base ainda não vinculada'
 }
 
 function buildMaterialMetric(materials: Material[]) {
-  if (!materials.length) return 'Pedido inicial em aprovacao'
+  if (!materials.length) return 'Pedido inicial em aprovação'
   const available = materials.filter((material) => material.isAvailable).length
   return `${available} de ${materials.length} itens disponiveis`
 }
@@ -965,6 +1073,29 @@ function formatMaterialAmount(value: number) {
     minimumFractionDigits: value % 1 === 0 ? 0 : 2,
     maximumFractionDigits: 2,
   }).format(value)
+}
+
+async function loadPhotoAsDataUrl(url: string) {
+  try {
+    const response = await fetch(url)
+    if (!response.ok) return ''
+
+    const blob = await response.blob()
+    return await new Promise<string>((resolve, reject) => {
+      const reader = new FileReader()
+      reader.onloadend = () => resolve(typeof reader.result === 'string' ? reader.result : '')
+      reader.onerror = () => reject(new Error('Falha ao ler imagem'))
+      reader.readAsDataURL(blob)
+    })
+  } catch {
+    return ''
+  }
+}
+
+function detectImageFormat(dataUrl: string) {
+  if (dataUrl.startsWith('data:image/png')) return 'PNG'
+  if (dataUrl.startsWith('data:image/webp')) return 'WEBP'
+  return 'JPEG'
 }
 
 function resolvePhotoUrl(url: string) {

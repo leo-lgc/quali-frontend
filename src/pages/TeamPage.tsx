@@ -96,7 +96,7 @@ export function TeamPage() {
       if (err instanceof ApiError) {
         setError(err.message)
       } else {
-        setError('Nao foi possivel carregar os colaboradores.')
+        setError('Não foi possível carregar os colaboradores.')
       }
     } finally {
       setIsLoading(false)
@@ -139,7 +139,7 @@ export function TeamPage() {
       if (err instanceof ApiError) {
         setRegisterError(err.message)
       } else {
-        setRegisterError('Nao foi possivel cadastrar o colaborador.')
+        setRegisterError('Não foi possível cadastrar o colaborador.')
       }
     } finally {
       setIsRegistering(false)
@@ -177,7 +177,7 @@ export function TeamPage() {
       if (err instanceof ApiError) {
         setArchiveError(err.message)
       } else {
-        setArchiveError('Nao foi possivel arquivar o colaborador.')
+        setArchiveError('Não foi possível arquivar o colaborador.')
       }
     } finally {
       setIsArchiving(false)
@@ -408,7 +408,7 @@ export function TeamPage() {
         onConfirm={() => void handleArchiveUser()}
         eyebrow="Equipe"
         title="Arquivar colaborador"
-        description="O usuario saira da lista principal de equipe ativa."
+        description="O usuário sairá da lista principal de equipe ativa."
         confirmLabel="Confirmar arquivamento"
         isSubmitting={isArchiving}
         error={archiveError}

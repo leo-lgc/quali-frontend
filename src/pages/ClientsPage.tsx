@@ -89,7 +89,7 @@ export function ClientsPage() {
       if (err instanceof ApiError) {
         setError(err.message)
       } else {
-        setError('Nao foi possivel carregar os clientes.')
+        setError('Não foi possível carregar os clientes.')
       }
     } finally {
       setIsLoading(false)
@@ -118,7 +118,7 @@ export function ClientsPage() {
       if (err instanceof ApiError) {
         setError(err.message)
       } else {
-        setError('Nao foi possivel cadastrar o cliente.')
+        setError('Não foi possível cadastrar o cliente.')
       }
     } finally {
       setIsSubmitting(false)
@@ -177,7 +177,7 @@ export function ClientsPage() {
       if (err instanceof ApiError) {
         setModalError(err.message)
       } else {
-        setModalError('Nao foi possivel atualizar o cliente.')
+        setModalError('Não foi possível atualizar o cliente.')
       }
     } finally {
       setIsEditSubmitting(false)
@@ -203,7 +203,7 @@ export function ClientsPage() {
       if (err instanceof ApiError) {
         setModalError(err.message)
       } else {
-        setModalError('Nao foi possivel arquivar o cliente.')
+        setModalError('Não foi possível arquivar o cliente.')
       }
     } finally {
       setIsArchiving(false)
@@ -323,7 +323,7 @@ export function ClientsPage() {
             <div className="work-overview-card__header">
               <div>
                 <h3>Novo cliente</h3>
-                <p>Cadastro rapido.</p>
+                <p>Cadastro rápido.</p>
               </div>
             </div>
 
@@ -364,7 +364,7 @@ export function ClientsPage() {
               Cancelar
             </button>
             <button type="submit" className="primary-button" disabled={isEditSubmitting}>
-              {isEditSubmitting ? 'Salvando...' : 'Salvar alteracoes'}
+              {isEditSubmitting ? 'Salvando...' : 'Salvar alterações'}
             </button>
           </div>
         </form>
@@ -376,7 +376,7 @@ export function ClientsPage() {
         onConfirm={() => void handleArchiveClient()}
         eyebrow="Cliente"
         title="Arquivar cadastro"
-        description="O cliente saira da lista principal."
+        description="O cliente sairá da lista principal."
         confirmLabel="Confirmar arquivamento"
         isSubmitting={isArchiving}
         error={modalError}

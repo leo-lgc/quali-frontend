@@ -71,7 +71,7 @@ export function TeamModal({
 
         setAvailableUsers(Array.from(uniqueMap.values()))
       } catch {
-        setError('Nao foi possivel carregar usuarios.')
+        setError('Não foi possível carregar usuários.')
       } finally {
         setIsLoadingUsers(false)
       }
@@ -106,7 +106,7 @@ export function TeamModal({
       onTeamUpdated()
       toast.success('Colaborador adicionado com sucesso.')
     } catch {
-      setError('Nao foi possivel adicionar o colaborador.')
+      setError('Não foi possível adicionar o colaborador.')
     } finally {
       setSaving(false)
     }
@@ -132,7 +132,7 @@ export function TeamModal({
       onTeamUpdated()
       toast.success('Colaborador removido com sucesso.')
     } catch {
-      setError('Nao foi possivel remover o colaborador.')
+      setError('Não foi possível remover o colaborador.')
     } finally {
       setSaving(false)
     }

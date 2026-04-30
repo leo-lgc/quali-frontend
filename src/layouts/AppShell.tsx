@@ -1,4 +1,4 @@
-import { Bell, ChevronLeft, ChevronRight, HardHat, MapPinned, Menu, Search, ShieldUser, Users, X } from 'lucide-react'
+import { ChevronLeft, ChevronRight, HardHat, MapPinned, Menu, Search, ShieldUser, Users, X } from 'lucide-react'
 import { useEffect, useState } from 'react'
 import { NavLink, Outlet, useLocation } from 'react-router-dom'
 import { useAuth } from '../features/auth/AuthContext'
@@ -65,8 +65,8 @@ export function AppShell() {
 
           <div className="shell__nav-wrap">
             <div className="shell__nav-header">
-              <p className="eyebrow">Navegacao</p>
-              <p className="shell__copy">Acesso rapido aos modulos principais do sistema.</p>
+              <p className="eyebrow">Navegação</p>
+              <p className="shell__copy">Acesso rápido aos módulos principais do sistema.</p>
             </div>
 
             <nav className="shell__nav" aria-label="Principal">
@@ -142,10 +142,6 @@ export function AppShell() {
               <Search size={18} />
               <input type="text" placeholder="Buscar" />
             </label>
-
-            <button className="icon-button" aria-label="Notificacoes" type="button">
-              <Bell size={18} />
-            </button>
           </div>
         </header>
 
