@@ -1,4 +1,4 @@
-import { Camera, ImagePlus, Trash2, Upload } from 'lucide-react'
+import { Camera, ImagePlus, Trash2, Upload, X } from 'lucide-react'
 import type { ChangeEvent, FormEvent } from 'react'
 import { ModalShell } from '../modals/ModalShell'
 
@@ -22,6 +22,7 @@ type PhotosModalProps = {
   fileInputKey: number
   onFileChange: (event: ChangeEvent<HTMLInputElement>) => void
   onPhotoDescriptionChange: (value: string) => void
+  onClearPreview: () => void
   onUpload: (event: FormEvent<HTMLFormElement>) => void
   onDelete: (photoId: number) => void
   resolvePhotoUrl: (url: string) => string
@@ -41,6 +42,7 @@ export function PhotosModal({
   fileInputKey,
   onFileChange,
   onPhotoDescriptionChange,
+  onClearPreview,
   onUpload,
   onDelete,
   resolvePhotoUrl,
@@ -107,6 +109,9 @@ export function PhotosModal({
 
             {selectedPhotoPreviewUrl ? (
               <div className="photos-upload-form__preview">
+                <button type="button" className="photos-upload-form__preview-close" onClick={onClearPreview} aria-label="Remover foto selecionada">
+                  <X size={14} />
+                </button>
                 <img src={selectedPhotoPreviewUrl} alt="Preview da nova foto" />
               </div>
             ) : null}

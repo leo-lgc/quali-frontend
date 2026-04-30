@@ -1,16 +1,16 @@
 import { ChevronLeft, ChevronRight, HardHat, MapPinned, Menu, Search, ShieldUser, Users, X } from 'lucide-react'
 import { useEffect, useState } from 'react'
 import { NavLink, Outlet, useLocation } from 'react-router-dom'
-import { useAuth } from '../features/auth/AuthContext'
+import { type AppRole, useAuth } from '../features/auth/AuthContext'
 
 const navigationItems = [
-  { to: '/obras', label: 'Obras', icon: MapPinned, enabled: true },
-  { to: '/clientes', label: 'Clientes', icon: ShieldUser, enabled: true },
-  { to: '/equipe', label: 'Equipe', icon: Users, enabled: true },
+  { to: '/obras', label: 'Obras', icon: MapPinned, enabled: true, roles: ['ADMIN', 'MANAGER', 'USER'] as AppRole[] },
+  { to: '/clientes', label: 'Clientes', icon: ShieldUser, enabled: true, roles: ['ADMIN', 'MANAGER'] as AppRole[] },
+  { to: '/equipe', label: 'Equipe', icon: Users, enabled: true, roles: ['ADMIN', 'MANAGER'] as AppRole[] },
 ]
 
 export function AppShell() {
-  const { logout } = useAuth()
+  const { logout, user } = useAuth()
   const location = useLocation()
   const [isDesktop, setIsDesktop] = useState(() => (typeof window === 'undefined' ? true : window.innerWidth > 1080))
   const [isSidebarOpen, setIsSidebarOpen] = useState(() => {
@@ -46,6 +46,10 @@ export function AppShell() {
     : location.pathname.startsWith('/equipe')
         ? 'Equipe'
       : 'Quali'
+  const userName = user?.name?.trim() || 'Usuário'
+  const userRole = formatRoleLabel(user?.role)
+  const userInitials = buildInitials(userName)
+  const visibleNavigationItems = navigationItems.filter((item) => !item.roles || (user?.role ? item.roles.includes(user.role) : false))
 
   return (
     <div className={`shell ${isSidebarOpen ? 'shell--sidebar-open' : 'shell--sidebar-closed'}`.trim()}>
@@ -70,7 +74,7 @@ export function AppShell() {
             </div>
 
             <nav className="shell__nav" aria-label="Principal">
-              {navigationItems.map((item) => (
+              {visibleNavigationItems.map((item) => (
                 item.enabled ? (
                   <NavLink
                     key={item.label}
@@ -97,10 +101,10 @@ export function AppShell() {
 
         <div className="shell__sidebar-bottom">
           <div className="shell__user-card">
-            <div className="shell__user-avatar">QT</div>
+            <div className="shell__user-avatar">{userInitials}</div>
             <div>
-              <strong>Quali Teste</strong>
-              <span>Administradora</span>
+              <strong>{userName}</strong>
+              <span>{userRole}</span>
             </div>
           </div>
 
@@ -149,4 +153,18 @@ export function AppShell() {
       </main>
     </div>
   )
+}
+
+function buildInitials(name: string) {
+  const parts = name.trim().split(/\s+/).filter(Boolean)
+  if (!parts.length) return 'U'
+  if (parts.length === 1) return parts[0].slice(0, 2).toUpperCase()
+  return `${parts[0][0] ?? ''}${parts[parts.length - 1][0] ?? ''}`.toUpperCase()
+}
+
+function formatRoleLabel(role: 'ADMIN' | 'MANAGER' | 'USER' | null | undefined) {
+  if (role === 'ADMIN') return 'Administrador(a)'
+  if (role === 'MANAGER') return 'Gestor(a)'
+  if (role === 'USER') return 'Colaborador(a)'
+  return 'Usuário do sistema'
 }

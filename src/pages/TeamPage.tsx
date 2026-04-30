@@ -39,7 +39,7 @@ const initialRegisterForm: RegisterForm = {
 }
 
 export function TeamPage() {
-  const { token } = useAuth()
+  const { token, user } = useAuth()
   const toast = useToast()
 
   const [users, setUsers] = useState<TeamUser[]>([])
@@ -382,7 +382,7 @@ export function TeamPage() {
                 >
                   <option value="USER">Usuario</option>
                   <option value="MANAGER">Gestor</option>
-                  <option value="ADMIN">Administrador</option>
+                  {user?.role === 'ADMIN' ? <option value="ADMIN">Administrador</option> : null}
                 </select>
               </label>
 

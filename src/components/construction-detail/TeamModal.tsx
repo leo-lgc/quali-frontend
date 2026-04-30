@@ -24,6 +24,7 @@ type TeamModalProps = {
   constructionId: string
   token: string
   onTeamUpdated: () => void
+  canManage: boolean
   apiRequest: <T>(url: string, options: Record<string, unknown>) => Promise<T>
   toast: { success: (msg: string) => void; error: (msg: string) => void }
 }
@@ -35,6 +36,7 @@ export function TeamModal({
   constructionId,
   token,
   onTeamUpdated,
+  canManage,
   apiRequest,
   toast,
 }: TeamModalProps) {
@@ -46,6 +48,13 @@ export function TeamModal({
 
   useEffect(() => {
     if (!isOpen) return
+    if (!canManage) {
+      setAvailableUsers([])
+      setSelectedUserId('')
+      setError('')
+      setIsLoadingUsers(false)
+      return
+    }
 
     async function loadUsers() {
       setIsLoadingUsers(true)
@@ -78,7 +87,7 @@ export function TeamModal({
     }
 
     void loadUsers()
-  }, [isOpen, token, apiRequest])
+  }, [isOpen, token, apiRequest, canManage])
 
   const workerIds = workers.map((w) => w.id)
   const filteredUsers = availableUsers.filter((u) => !workerIds.includes(u.id))
@@ -159,34 +168,36 @@ export function TeamModal({
           <span className="weather-pill">{workers.length}</span>
         </div>
 
-        <div className="team-add-form">
-          <label className="field team-add-form__select">
-            <span>Adicionar colaborador</span>
-            <select
-              value={selectedUserId}
-              onChange={(e) => setSelectedUserId(e.target.value)}
-              disabled={isLoadingUsers || isSaving}
-            >
-              <option value="">
-                {isLoadingUsers ? 'Carregando...' : 'Selecione um colaborador'}
-              </option>
-              {filteredUsers.map((user) => (
-                <option key={user.id} value={user.id}>
-                  {user.name} ({user.email})
+        {canManage ? (
+          <div className="team-add-form">
+            <label className="field team-add-form__select">
+              <span>Adicionar colaborador</span>
+              <select
+                value={selectedUserId}
+                onChange={(e) => setSelectedUserId(e.target.value)}
+                disabled={isLoadingUsers || isSaving}
+              >
+                <option value="">
+                  {isLoadingUsers ? 'Carregando...' : 'Selecione um colaborador'}
                 </option>
-              ))}
-            </select>
-          </label>
-          <button
-            type="button"
-            className="primary-button team-add-form__submit"
-            onClick={() => void handleAddWorker()}
-            disabled={!selectedUserId || isSaving}
-          >
-            <UserPlus size={17} />
-            {isSaving ? 'Salvando...' : 'Adicionar'}
-          </button>
-        </div>
+                {filteredUsers.map((user) => (
+                  <option key={user.id} value={user.id}>
+                    {user.name} ({user.email})
+                  </option>
+                ))}
+              </select>
+            </label>
+            <button
+              type="button"
+              className="primary-button team-add-form__submit"
+              onClick={() => void handleAddWorker()}
+              disabled={!selectedUserId || isSaving}
+            >
+              <UserPlus size={17} />
+              {isSaving ? 'Salvando...' : 'Adicionar'}
+            </button>
+          </div>
+        ) : null}
 
         {error ? <p className="form-error">{error}</p> : null}
 
@@ -202,17 +213,19 @@ export function TeamModal({
                     <strong>{userInfo?.name ?? worker.email}</strong>
                     {userInfo?.name ? <span className="team-row__email">{worker.email}</span> : null}
                   </div>
-                  <div className="team-row__actions">
-                    <button
-                      type="button"
-                      className="ghost-page-button"
-                      onClick={() => void handleRemoveWorker(worker.id)}
-                      disabled={isSaving}
-                    >
-                      <Trash2 size={15} />
-                      Remover
-                    </button>
-                  </div>
+                  {canManage ? (
+                    <div className="team-row__actions">
+                      <button
+                        type="button"
+                        className="ghost-page-button"
+                        onClick={() => void handleRemoveWorker(worker.id)}
+                        disabled={isSaving}
+                      >
+                        <Trash2 size={15} />
+                        Remover
+                      </button>
+                    </div>
+                  ) : null}
                 </article>
               )
             })

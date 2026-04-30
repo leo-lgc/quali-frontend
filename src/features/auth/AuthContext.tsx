@@ -18,12 +18,21 @@ type LoginPayload = {
   password: string
 }
 
+export type AppRole = 'ADMIN' | 'MANAGER' | 'USER'
+
 type LoginResponse = {
   token: string
 }
 
+type AuthUser = {
+  name: string
+  email: string
+  role: AppRole | null
+}
+
 type AuthContextValue = {
   token: string | null
+  user: AuthUser | null
   isAuthenticated: boolean
   login: (payload: LoginPayload) => Promise<void>
   logout: () => void
@@ -48,6 +57,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
 
     return storedToken
   })
+  const user = useMemo(() => (token ? parseUserFromToken(token) : null), [token])
 
   const login = useCallback(async ({ email, password }: LoginPayload) => {
     const response = await apiRequest<LoginResponse>('/auth/login', {
@@ -70,14 +80,37 @@ export function AuthProvider({ children }: AuthProviderProps) {
   const value = useMemo(
     () => ({
       token,
+      user,
       isAuthenticated: Boolean(token),
       login,
       logout,
     }),
-    [login, logout, token],
+    [login, logout, token, user],
   )
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>
+}
+
+function parseUserFromToken(token: string): AuthUser | null {
+  try {
+    const [, payloadPart] = token.split('.')
+    if (!payloadPart) return null
+
+    const payloadJson = atob(payloadPart.replace(/-/g, '+').replace(/_/g, '/'))
+    const payload = JSON.parse(payloadJson) as {
+      sub?: string
+      name?: string
+      role?: 'ADMIN' | 'MANAGER' | 'USER'
+    }
+
+    return {
+      name: payload.name || payload.sub || 'Usuário',
+      email: payload.sub || '',
+      role: payload.role ?? null,
+    }
+  } catch {
+    return null
+  }
 }
 
 function isTokenExpired(token: string) {

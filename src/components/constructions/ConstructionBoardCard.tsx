@@ -18,6 +18,7 @@ type ConstructionBoardCardProps = {
   item: Construction
   onEdit: (construction: Construction) => void | Promise<void>
   onArchive: (construction: Construction) => void
+  canManage: boolean
 }
 
 const statusLabel: Record<ConstructionStatus, string> = {
@@ -26,7 +27,7 @@ const statusLabel: Record<ConstructionStatus, string> = {
   COMPLETED: 'Finalizada',
 }
 
-export function ConstructionBoardCard({ item, onEdit, onArchive }: ConstructionBoardCardProps) {
+export function ConstructionBoardCard({ item, onEdit, onArchive, canManage }: ConstructionBoardCardProps) {
   const [isMenuOpen, setMenuOpen] = useState(false)
   const menuRef = useRef<HTMLDivElement | null>(null)
 
@@ -70,44 +71,46 @@ export function ConstructionBoardCard({ item, onEdit, onArchive }: ConstructionB
           Abrir obra
         </Link>
 
-        <div className="board-card__menu" ref={menuRef}>
-          <button
-            type="button"
-            className="ghost-page-button board-card__menu-trigger"
-            onClick={() => setMenuOpen((current) => !current)}
-            aria-label="Acoes da obra"
-            aria-expanded={isMenuOpen}
-          >
-            <Ellipsis size={16} />
-          </button>
+        {canManage ? (
+          <div className="board-card__menu" ref={menuRef}>
+            <button
+              type="button"
+              className="ghost-page-button board-card__menu-trigger"
+              onClick={() => setMenuOpen((current) => !current)}
+              aria-label="Acoes da obra"
+              aria-expanded={isMenuOpen}
+            >
+              <Ellipsis size={16} />
+            </button>
 
-          {isMenuOpen ? (
-            <div className="board-card__menu-panel" role="menu" aria-label="Acoes da obra">
-              <button
-                type="button"
-                className="board-card__menu-item"
-                onClick={() => {
-                  setMenuOpen(false)
-                  void onEdit(item)
-                }}
-              >
-                <Pencil size={14} />
-                Editar
-              </button>
-              <button
-                type="button"
-                className="board-card__menu-item board-card__menu-item--danger"
-                onClick={() => {
-                  setMenuOpen(false)
-                  onArchive(item)
-                }}
-              >
-                <Archive size={14} />
-                Arquivar
-              </button>
-            </div>
-          ) : null}
-        </div>
+            {isMenuOpen ? (
+              <div className="board-card__menu-panel" role="menu" aria-label="Acoes da obra">
+                <button
+                  type="button"
+                  className="board-card__menu-item"
+                  onClick={() => {
+                    setMenuOpen(false)
+                    void onEdit(item)
+                  }}
+                >
+                  <Pencil size={14} />
+                  Editar
+                </button>
+                <button
+                  type="button"
+                  className="board-card__menu-item board-card__menu-item--danger"
+                  onClick={() => {
+                    setMenuOpen(false)
+                    onArchive(item)
+                  }}
+                >
+                  <Archive size={14} />
+                  Arquivar
+                </button>
+              </div>
+            ) : null}
+          </div>
+        ) : null}
       </div>
     </article>
   )

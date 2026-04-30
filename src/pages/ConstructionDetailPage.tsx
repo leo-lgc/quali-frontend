@@ -92,8 +92,9 @@ const statusLabel: Record<Status, string> = {
 
 export function ConstructionDetailPage() {
   const { constructionId } = useParams()
-  const { token } = useAuth()
+  const { token, user } = useAuth()
   const toast = useToast()
+  const canManageConstruction = user?.role === 'ADMIN' || user?.role === 'MANAGER'
   const [isChecklistModalOpen, setIsChecklistModalOpen] = useState(false)
   const [isMaterialsModalOpen, setIsMaterialsModalOpen] = useState(false)
   const [isTeamModalOpen, setIsTeamModalOpen] = useState(false)
@@ -516,6 +517,17 @@ export function ConstructionDetailPage() {
     setPhotosError('')
   }
 
+  function handleClearPhotoPreview() {
+    setSelectedPhotoFile(null)
+    if (selectedPhotoPreviewUrl) {
+      URL.revokeObjectURL(selectedPhotoPreviewUrl)
+    }
+    setSelectedPhotoPreviewUrl('')
+    setPhotoDescription('')
+    setPhotoInputKey((current) => current + 1)
+    setPhotosError('')
+  }
+
   async function handleUploadPhoto(event: FormEvent<HTMLFormElement>) {
     event.preventDefault()
 
@@ -834,16 +846,18 @@ export function ConstructionDetailPage() {
             </div>
             <div className="detail-status-controls">
               <span className="work-status-pill">{statusLabel[report.status]}</span>
-              <label className="detail-status-select">
-                <span className="sr-only">Alterar status da obra</span>
-                <select value={report.status} onChange={(event) => void handleStatusChange(event.target.value as Status)} disabled={isUpdatingStatus}>
-                  {Object.entries(statusLabel).map(([value, label]) => (
-                    <option key={value} value={value}>
-                      {label}
-                    </option>
-                  ))}
-                </select>
-              </label>
+              {canManageConstruction ? (
+                <label className="detail-status-select">
+                  <span className="sr-only">Alterar status da obra</span>
+                  <select value={report.status} onChange={(event) => void handleStatusChange(event.target.value as Status)} disabled={isUpdatingStatus}>
+                    {Object.entries(statusLabel).map(([value, label]) => (
+                      <option key={value} value={value}>
+                        {label}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+              ) : null}
             </div>
           </div>
 
@@ -898,7 +912,7 @@ export function ConstructionDetailPage() {
           description="Equipe alocada."
           metric={buildTeamMetric(report)}
           actions={[
-            { label: 'Gerenciar equipe', variant: 'secondary', onClick: () => setIsTeamModalOpen(true) },
+            { label: canManageConstruction ? 'Gerenciar equipe' : 'Ver equipe', variant: 'secondary', onClick: () => setIsTeamModalOpen(true) },
           ]}
         />
 
@@ -966,6 +980,7 @@ export function ConstructionDetailPage() {
         constructionId={constructionId!}
         token={token!}
         onTeamUpdated={() => void reloadReport()}
+        canManage={canManageConstruction}
         apiRequest={apiRequest}
         toast={toast}
       />
@@ -1004,6 +1019,7 @@ export function ConstructionDetailPage() {
         fileInputKey={photoInputKey}
         onFileChange={handlePhotoFileChange}
         onPhotoDescriptionChange={setPhotoDescription}
+        onClearPreview={handleClearPhotoPreview}
         onUpload={handleUploadPhoto}
         onDelete={(photoId) => void handleDeletePhoto(photoId)}
         resolvePhotoUrl={resolvePhotoUrl}

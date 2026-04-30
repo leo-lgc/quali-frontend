@@ -155,8 +155,9 @@ const initialColumnsState: Record<ConstructionStatus, ConstructionColumnState> =
 }
 
 export function ConstructionsPage() {
-  const { token } = useAuth()
+  const { token, user } = useAuth()
   const toast = useToast()
+  const canManageConstruction = user?.role === 'ADMIN' || user?.role === 'MANAGER'
   const [columns, setColumns] = useState<Record<ConstructionStatus, ConstructionColumnState>>(initialColumnsState)
   const [clients, setClients] = useState<ClientOption[]>([])
   const [search, setSearch] = useState('')
@@ -587,10 +588,12 @@ export function ConstructionsPage() {
               </div>
             </div>
 
-            <button type="button" className="primary-button works-hero__button" onClick={openCreateModal}>
-              <Plus size={18} />
-              Nova obra
-            </button>
+            {user?.role !== 'USER' ? (
+              <button type="button" className="primary-button works-hero__button" onClick={openCreateModal}>
+                <Plus size={18} />
+                Nova obra
+              </button>
+            ) : null}
           </div>
         </section>
 
@@ -655,9 +658,9 @@ export function ConstructionsPage() {
 
                   <div className="board-column__list">
                     {group.items.length ? (
-                      group.items.map((item) => (
-                        <ConstructionBoardCard key={item.id} item={item} onEdit={openEditModal} onArchive={openArchiveModal} />
-                      ))
+                        group.items.map((item) => (
+                          <ConstructionBoardCard key={item.id} item={item} onEdit={openEditModal} onArchive={openArchiveModal} canManage={canManageConstruction} />
+                        ))
                     ) : (
                       <p className="feedback">Nenhuma obra nesta coluna para o filtro atual.</p>
                     )}

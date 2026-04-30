@@ -22,8 +22,8 @@ export function AppRouter() {
         <Route index element={<Navigate to="/obras" replace />} />
         <Route path="/obras" element={<ConstructionsPage />} />
         <Route path="/obras/:constructionId" element={<ConstructionDetailPage />} />
-        <Route path="/clientes" element={<ClientsPage />} />
-        <Route path="/equipe" element={<TeamPage />} />
+        <Route path="/clientes" element={<ProtectedRoute allowedRoles={['ADMIN', 'MANAGER']} deniedMessage="Você não pode acessar a tela de clientes."><ClientsPage /></ProtectedRoute>} />
+        <Route path="/equipe" element={<ProtectedRoute allowedRoles={['ADMIN', 'MANAGER']} deniedMessage="Você não pode acessar a tela de equipe."><TeamPage /></ProtectedRoute>} />
       </Route>
       <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>
