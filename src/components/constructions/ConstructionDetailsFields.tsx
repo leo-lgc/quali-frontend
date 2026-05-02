@@ -23,20 +23,26 @@ type ConstructionDetailsFieldsProps = {
   form: ConstructionFormState
   clients: ClientOption[]
   clientError?: string
+  nameError?: string
+  localContactError?: string
+  startDateError?: string
+  endDateError?: string
   onChange: (field: keyof ConstructionFormState, value: string) => void
 }
 
-export function ConstructionDetailsFields({ form, clients, clientError = '', onChange }: ConstructionDetailsFieldsProps) {
+export function ConstructionDetailsFields({ form, clients, clientError = '', nameError = '', localContactError = '', startDateError = '', endDateError = '', onChange }: ConstructionDetailsFieldsProps) {
   return (
     <div className="works-form__grid">
       <label className="field">
         <span>Nome da obra</span>
-        <input type="text" value={form.name} onChange={(event) => onChange('name', event.target.value)} placeholder="Digite o nome da obra" required />
+        <input type="text" value={form.name} onChange={(event) => onChange('name', event.target.value)} placeholder="Digite o nome da obra" className={nameError ? 'input-error' : undefined} required />
+        {nameError ? <small className="field-help field-help--error field-help--inline-error">{nameError}</small> : null}
       </label>
 
       <label className="field">
         <span>Contato local</span>
-        <input type="text" value={form.localContact} onChange={(event) => onChange('localContact', event.target.value)} placeholder="Digite o responsável local" required />
+        <input type="text" value={form.localContact} onChange={(event) => onChange('localContact', event.target.value)} placeholder="Digite o responsável local" className={localContactError ? 'input-error' : undefined} required />
+        {localContactError ? <small className="field-help field-help--error field-help--inline-error">{localContactError}</small> : null}
       </label>
 
       <label className="field field--client-select">
@@ -53,7 +59,7 @@ export function ConstructionDetailsFields({ form, clients, clientError = '', onC
             <option key={client.id} value={client.id}>{client.name}</option>
           ))}
         </select>
-        {clientError ? <small className="field-help field-help--error">{clientError}</small> : null}
+        {clientError ? <small className="field-help field-help--error field-help--inline-error">{clientError}</small> : null}
       </label>
 
       <label className="field">
@@ -63,13 +69,38 @@ export function ConstructionDetailsFields({ form, clients, clientError = '', onC
 
       <label className="field">
         <span>Data de início</span>
-        <input type="date" value={form.startDate} onChange={(event) => onChange('startDate', event.target.value)} required />
+        <input
+          type="text"
+          inputMode="numeric"
+          value={form.startDate}
+          onChange={(event) => onChange('startDate', formatDateMask(event.target.value))}
+          placeholder="dd/mm/aaaa"
+          className={startDateError ? 'input-error' : undefined}
+          required
+        />
+        {startDateError ? <small className="field-help field-help--error field-help--inline-error">{startDateError}</small> : null}
       </label>
 
       <label className="field">
         <span>Data de fim</span>
-        <input type="date" value={form.endDate} onChange={(event) => onChange('endDate', event.target.value)} required />
+        <input
+          type="text"
+          inputMode="numeric"
+          value={form.endDate}
+          onChange={(event) => onChange('endDate', formatDateMask(event.target.value))}
+          placeholder="dd/mm/aaaa"
+          className={endDateError ? 'input-error' : undefined}
+          required
+        />
+        {endDateError ? <small className="field-help field-help--error field-help--inline-error">{endDateError}</small> : null}
       </label>
     </div>
   )
+}
+
+function formatDateMask(value: string) {
+  const digits = value.replace(/\D/g, '').slice(0, 8)
+  if (digits.length <= 2) return digits
+  if (digits.length <= 4) return `${digits.slice(0, 2)}/${digits.slice(2)}`
+  return `${digits.slice(0, 2)}/${digits.slice(2, 4)}/${digits.slice(4)}`
 }

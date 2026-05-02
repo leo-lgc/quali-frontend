@@ -1,4 +1,4 @@
-import { ChevronLeft, ChevronRight, HardHat, MapPinned, Menu, Search, ShieldUser, Users, X } from 'lucide-react'
+import { ChevronLeft, ChevronRight, HardHat, MapPinned, Menu, ShieldUser, Users, X } from 'lucide-react'
 import { useEffect, useState } from 'react'
 import { NavLink, Outlet, useLocation } from 'react-router-dom'
 import { type AppRole, useAuth } from '../features/auth/AuthContext'
@@ -50,6 +50,7 @@ export function AppShell() {
   const userRole = formatRoleLabel(user?.role)
   const userInitials = buildInitials(userName)
   const visibleNavigationItems = navigationItems.filter((item) => !item.roles || (user?.role ? item.roles.includes(user.role) : false))
+  const topbarHint = buildTopbarHint(location.pathname, user?.role)
 
   return (
     <div className={`shell ${isSidebarOpen ? 'shell--sidebar-open' : 'shell--sidebar-closed'}`.trim()}>
@@ -63,7 +64,7 @@ export function AppShell() {
             </div>
             <div className="shell__brand-copy">
               <strong>Quali</strong>
-              <span>Gestao da qualidade</span>
+              <span>Gestão da qualidade</span>
             </div>
           </div>
 
@@ -142,10 +143,10 @@ export function AppShell() {
           </div>
 
           <div className="topbar__actions">
-            <label className="search-box" aria-label="Buscar no sistema">
-              <Search size={18} />
-              <input type="text" placeholder="Buscar" />
-            </label>
+            <div className="topbar__context-card" aria-label="Contexto da tela">
+              <strong>{userRole}</strong>
+              <span>{topbarHint}</span>
+            </div>
           </div>
         </header>
 
@@ -167,4 +168,13 @@ function formatRoleLabel(role: 'ADMIN' | 'MANAGER' | 'USER' | null | undefined) 
   if (role === 'MANAGER') return 'Gestor(a)'
   if (role === 'USER') return 'Colaborador(a)'
   return 'Usuário do sistema'
+}
+
+function buildTopbarHint(pathname: string, role: AppRole | null | undefined) {
+  if (pathname.startsWith('/obras/') && role === 'USER') return 'Acesso liberado apenas às obras em que você participa.'
+  if (pathname.startsWith('/obras/')) return 'Acompanhe prazo, equipe, materiais, fotos e checklist da obra.'
+  if (pathname.startsWith('/obras')) return role === 'USER' ? 'Painel restrito às obras da sua equipe.' : 'Painel executivo com filtros, status e atalhos da operação.'
+  if (pathname.startsWith('/clientes')) return 'Base ativa de clientes para cadastro, edição e arquivamento.'
+  if (pathname.startsWith('/equipe')) return role === 'ADMIN' ? 'Gerencie colaboradores e perfis de acesso do sistema.' : 'Acompanhe colaboradores ativos e gerencie a operação da equipe.'
+  return 'Painel principal do sistema.'
 }

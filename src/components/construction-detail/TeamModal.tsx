@@ -153,7 +153,7 @@ export function TeamModal({
       onClose={onClose}
       eyebrow="Equipe da obra"
       title="Colaboradores vinculados"
-      description="Gerencie a equipe alocada nesta obra."
+      description={canManage ? 'Gerencie a equipe alocada nesta obra.' : 'Consulte a equipe alocada nesta obra.'}
       className="team-modal"
       ariaLabel="Equipe da obra"
     >
@@ -197,7 +197,12 @@ export function TeamModal({
               {isSaving ? 'Salvando...' : 'Adicionar'}
             </button>
           </div>
-        ) : null}
+        ) : (
+          <div className="team-readonly-note">
+            <strong>Consulta liberada.</strong>
+            <span>Somente gestores e administradores podem alterar a equipe da obra.</span>
+          </div>
+        )}
 
         {error ? <p className="form-error">{error}</p> : null}
 
@@ -232,7 +237,7 @@ export function TeamModal({
           ) : (
             <div className="team-empty-state">
               <strong>Nenhum colaborador vinculado.</strong>
-              <span>Adicione o primeiro membro da equipe.</span>
+              <span>{canManage ? 'Adicione o primeiro membro da equipe.' : 'A equipe desta obra ainda não possui colaboradores vinculados.'}</span>
             </div>
           )}
         </div>

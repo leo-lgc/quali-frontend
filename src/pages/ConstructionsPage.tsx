@@ -11,6 +11,7 @@ import { useAuth } from '../features/auth/AuthContext'
 
 type ConstructionStatus = 'SCHEDULED' | 'IN_PROGRESS' | 'COMPLETED'
 type BoardFilter = 'ALL' | ConstructionStatus
+type ConstructionScope = 'ACTIVE' | 'ARCHIVED'
 
 type ConstructionColumnState = {
   items: Construction[]
@@ -136,7 +137,7 @@ const statusAccentClass: Record<ConstructionStatus, string> = {
   COMPLETED: 'board-column--finalizada',
 }
 
-const boardStatuses: ConstructionStatus[] = ['IN_PROGRESS', 'SCHEDULED', 'COMPLETED']
+const boardStatuses: ConstructionStatus[] = ['SCHEDULED', 'IN_PROGRESS', 'COMPLETED']
 const boardPageSize = 8
 
 const initialColumnState: ConstructionColumnState = {
@@ -163,6 +164,7 @@ export function ConstructionsPage() {
   const [search, setSearch] = useState('')
   const [debouncedSearch, setDebouncedSearch] = useState('')
   const [boardFilter, setBoardFilter] = useState<BoardFilter>('ALL')
+  const [scope, setScope] = useState<ConstructionScope>('ACTIVE')
   const [isLoading, setIsLoading] = useState(true)
   const [isModalOpen, setIsModalOpen] = useState(false)
   const [isArchiveModalOpen, setIsArchiveModalOpen] = useState(false)
@@ -177,6 +179,10 @@ export function ConstructionsPage() {
   const [error, setError] = useState('')
   const [modalError, setModalError] = useState('')
   const [clientFieldError, setClientFieldError] = useState('')
+  const [nameFieldError, setNameFieldError] = useState('')
+  const [localContactFieldError, setLocalContactFieldError] = useState('')
+  const [startDateFieldError, setStartDateFieldError] = useState('')
+  const [endDateFieldError, setEndDateFieldError] = useState('')
   const [cepError, setCepError] = useState('')
   const [form, setForm] = useState<ConstructionFormState>(initialForm)
 
@@ -199,7 +205,7 @@ export function ConstructionsPage() {
 
   useEffect(() => {
     void loadBoardData(debouncedSearch)
-  }, [token, debouncedSearch])
+  }, [token, debouncedSearch, scope])
 
   async function loadClients() {
     try {
@@ -215,6 +221,32 @@ export function ConstructionsPage() {
     setError('')
 
     try {
+      if (scope === 'ARCHIVED') {
+        const archivedResponse = await apiRequest<PageResponse<Construction>>(`/construction/filter/deleted?page=0&size=60`, { token })
+        const archivedItems = archivedResponse.content ?? []
+
+        const nextColumns: Record<ConstructionStatus, ConstructionColumnState> = {
+          IN_PROGRESS: { ...initialColumnState },
+          SCHEDULED: { ...initialColumnState },
+          COMPLETED: { ...initialColumnState },
+        }
+
+        for (const status of boardStatuses) {
+          const filtered = archivedItems.filter((item) => item.status === status)
+          nextColumns[status] = {
+            items: filtered,
+            page: 0,
+            totalPages: 1,
+            totalElements: filtered.length,
+            isLoading: false,
+            error: '',
+          }
+        }
+
+        setColumns(nextColumns)
+        return
+      }
+
       const columnResponses = await Promise.all(
         boardStatuses.map((status) =>
           apiRequest<PageResponse<Construction>>(buildStatusFilterUrl(status, 0, boardPageSize, searchQuery), { token }),
@@ -309,6 +341,10 @@ export function ConstructionsPage() {
     setModalStep('details')
     setModalError('')
     setCepError('')
+    setNameFieldError('')
+    setLocalContactFieldError('')
+    setStartDateFieldError('')
+    setEndDateFieldError('')
     setIsModalOpen(true)
   }
 
@@ -319,6 +355,10 @@ export function ConstructionsPage() {
     setModalStep('details')
     setModalError('')
     setCepError('')
+    setNameFieldError('')
+    setLocalContactFieldError('')
+    setStartDateFieldError('')
+    setEndDateFieldError('')
     setIsEditingLoading(true)
     setIsModalOpen(true)
 
@@ -368,6 +408,10 @@ export function ConstructionsPage() {
     setModalStep('details')
     setModalError('')
     setClientFieldError('')
+    setNameFieldError('')
+    setLocalContactFieldError('')
+    setStartDateFieldError('')
+    setEndDateFieldError('')
     setCepError('')
     setForm(initialForm)
   }
@@ -380,6 +424,38 @@ export function ConstructionsPage() {
     }
 
     setClientFieldError('')
+    setNameFieldError('')
+    setLocalContactFieldError('')
+    setStartDateFieldError('')
+    setEndDateFieldError('')
+
+    if (!hasLetters(form.name)) {
+      setNameFieldError('Informe um nome de obra válido (não use apenas números).')
+      setModalStep('details')
+      setIsSubmitting(false)
+      return
+    }
+
+    if (!hasLetters(form.localContact)) {
+      setLocalContactFieldError('Informe um contato local válido (não use apenas números).')
+      setModalStep('details')
+      setIsSubmitting(false)
+      return
+    }
+
+    if (!isCompleteDate(form.startDate)) {
+      setStartDateFieldError('Informe a data de início no formato dd/mm/aaaa.')
+      setModalStep('details')
+      setIsSubmitting(false)
+      return
+    }
+
+    if (!isCompleteDate(form.endDate)) {
+      setEndDateFieldError('Informe a data de fim no formato dd/mm/aaaa.')
+      setModalStep('details')
+      setIsSubmitting(false)
+      return
+    }
     setModalStep('address')
   }
 
@@ -531,11 +607,32 @@ export function ConstructionsPage() {
     if (field === 'clientId') {
       setClientFieldError('')
     }
+    if (field === 'name') setNameFieldError('')
+    if (field === 'localContact') setLocalContactFieldError('')
+    if (field === 'startDate') setStartDateFieldError('')
+    if (field === 'endDate') setEndDateFieldError('')
 
     setForm((current) => ({
       ...current,
       [field]: value,
     }))
+  }
+
+  async function handleRetrieveConstruction(constructionId: number) {
+    try {
+      await apiRequest(`/construction/retrieve/${constructionId}`, {
+        method: 'PATCH',
+        token,
+      })
+      toast.success('Obra recuperada com sucesso.')
+      await loadBoardData(debouncedSearch)
+    } catch (err) {
+      if (err instanceof ApiError) {
+        setError(err.message)
+      } else {
+        setError('Não foi possível recuperar a obra.')
+      }
+    }
   }
 
   const groupedItems = useMemo(() => {
@@ -643,6 +740,24 @@ export function ConstructionsPage() {
               >
                 Finalizadas
               </button>
+              {canManageConstruction ? (
+                <>
+                  <button
+                    type="button"
+                    className={scope === 'ACTIVE' ? 'board-filter-pill board-filter-pill--active' : 'board-filter-pill'}
+                    onClick={() => setScope('ACTIVE')}
+                  >
+                    Ativas
+                  </button>
+                  <button
+                    type="button"
+                    className={scope === 'ARCHIVED' ? 'board-filter-pill board-filter-pill--active' : 'board-filter-pill'}
+                    onClick={() => setScope('ARCHIVED')}
+                  >
+                    Arquivadas
+                  </button>
+                </>
+              ) : null}
             </div>
           </div>
 
@@ -664,7 +779,14 @@ export function ConstructionsPage() {
                   <div className="board-column__list">
                     {group.items.length ? (
                         group.items.map((item) => (
-                          <ConstructionBoardCard key={item.id} item={item} onEdit={openEditModal} onArchive={openArchiveModal} canManage={canManageConstruction} />
+                          <ConstructionBoardCard
+                            key={item.id}
+                            item={item}
+                            onEdit={openEditModal}
+                            onArchive={openArchiveModal}
+                            onRetrieve={scope === 'ARCHIVED' ? handleRetrieveConstruction : undefined}
+                            canManage={canManageConstruction}
+                          />
                         ))
                     ) : (
                       <p className="feedback">Nenhuma obra nesta coluna para o filtro atual.</p>
@@ -673,7 +795,7 @@ export function ConstructionsPage() {
 
                   {group.error ? <p className="form-error board-column__error">{group.error}</p> : null}
 
-                  {group.hasMore ? (
+                  {group.hasMore && scope === 'ACTIVE' ? (
                     <div className="board-column__footer">
                       <button
                         type="button"
@@ -723,7 +845,16 @@ export function ConstructionsPage() {
                     <p className="panel__copy">Dados da obra.</p>
                   </div>
 
-                  <ConstructionDetailsFields form={form} clients={clients} clientError={clientFieldError} onChange={handleFormChange} />
+                  <ConstructionDetailsFields
+                    form={form}
+                    clients={clients}
+                    clientError={clientFieldError}
+                    nameError={nameFieldError}
+                    localContactError={localContactFieldError}
+                    startDateError={startDateFieldError}
+                    endDateError={endDateFieldError}
+                    onChange={handleFormChange}
+                  />
                 </section>
               ) : (
                 <div className="works-form__stack">
@@ -799,18 +930,42 @@ function buildStatusFilterUrl(status: ConstructionStatus, page: number, size: nu
 }
 
 function formatApiDate(value: string) {
-  const [year, month, day] = value.split('-')
+  const normalized = value?.trim()
+  if (!normalized) return ''
+
+  if (/^\d{2}\/\d{2}\/\d{4}$/.test(normalized)) {
+    return normalized
+  }
+
+  const [year, month, day] = normalized.split('-')
+  if (!year || !month || !day) return ''
   return `${day}/${month}/${year}`
 }
 
 function formatInputDate(value: string) {
-  const [day, month, year] = value.split('/')
+  const normalized = value?.trim()
+  if (!normalized) return ''
+
+  if (/^\d{4}-\d{2}-\d{2}$/.test(normalized)) {
+    const [year, month, day] = normalized.split('-')
+    return `${day}/${month}/${year}`
+  }
+
+  const [day, month, year] = normalized.split('/')
   if (!day || !month || !year) return ''
-  return `${year}-${month.padStart(2, '0')}-${day.padStart(2, '0')}`
+  return `${day.padStart(2, '0')}/${month.padStart(2, '0')}/${year}`
 }
 
 function formatCep(value: string) {
   const normalized = value.replace(/\D/g, '')
   if (normalized.length <= 5) return normalized
   return `${normalized.slice(0, 5)}-${normalized.slice(5, 8)}`
+}
+
+function hasLetters(value: string) {
+  return /[A-Za-zÀ-ÖØ-öø-ÿ]/.test(value)
+}
+
+function isCompleteDate(value: string) {
+  return /^\d{2}\/\d{2}\/\d{4}$/.test(value.trim())
 }

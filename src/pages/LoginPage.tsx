@@ -1,25 +1,15 @@
 import { useState, type FormEvent } from 'react'
-import { useLocation, useNavigate } from 'react-router-dom'
+import { useNavigate } from 'react-router-dom'
 import { ApiError } from '../lib/api'
 import { useAuth } from '../features/auth/AuthContext'
 
-type LocationState = {
-  from?: {
-    pathname?: string
-  }
-}
-
 export function LoginPage() {
   const navigate = useNavigate()
-  const location = useLocation()
   const { login } = useAuth()
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [error, setError] = useState('')
   const [isSubmitting, setIsSubmitting] = useState(false)
-
-  const state = location.state as LocationState | null
-  const redirectTo = state?.from?.pathname || '/obras'
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault()
@@ -28,7 +18,7 @@ export function LoginPage() {
 
     try {
       await login({ email, password })
-      navigate(redirectTo, { replace: true })
+      navigate('/obras', { replace: true })
     } catch (err) {
       if (err instanceof ApiError) {
         setError(err.message)
@@ -128,7 +118,7 @@ export function LoginPage() {
             </button>
           </form>
 
-          <p className="auth-footer-copy">Ambiente local para validacao inicial das telas do frontend.</p>
+          <p className="auth-footer-copy">Ambiente local para validação inicial das telas do frontend.</p>
         </div>
       </section>
     </div>

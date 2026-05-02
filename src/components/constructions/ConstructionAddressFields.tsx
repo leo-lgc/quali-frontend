@@ -34,15 +34,23 @@ export function ConstructionAddressFields({
       <section className="modal-section modal-section--soft">
         <div className="modal-section__header">
           <span className="panel__eyebrow">Endereço</span>
-          <p className="panel__copy">Endereço da obra.</p>
+          <p className="panel__copy">Endereço da obra. Preenchimento automático disponível via CEP.</p>
         </div>
 
         <div className="works-form__grid">
           <label className="field field--full">
             <span>CEP</span>
-            <input type="text" value={form.cep} onChange={(event) => onCepChange(event.target.value)} placeholder="Digite o CEP" required />
-            <small className="field-help">{isFetchingCep ? 'Buscando endereço...' : 'Preenchimento automático via CEP.'}</small>
-            {cepError ? <small className="field-help field-help--error">{cepError}</small> : null}
+            <input
+              type="text"
+              value={form.cep}
+              onChange={(event) => onCepChange(event.target.value)}
+              placeholder="Digite o CEP"
+              className={cepError ? 'input-error' : undefined}
+              aria-invalid={Boolean(cepError)}
+              required
+            />
+            {cepError ? <small className="field-help field-help--error field-help--inline-error">{cepError}</small> : null}
+            {!cepError && isFetchingCep ? <small className="field-help field-help--inline-error">Buscando endereço...</small> : null}
           </label>
 
           <label className="field">

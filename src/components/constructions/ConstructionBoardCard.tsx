@@ -1,4 +1,4 @@
-import { Archive, BriefcaseBusiness, Ellipsis, Pencil } from 'lucide-react'
+import { Archive, BriefcaseBusiness, Ellipsis, Pencil, RotateCcw } from 'lucide-react'
 import { useEffect, useRef, useState } from 'react'
 import { Link } from 'react-router-dom'
 
@@ -18,6 +18,7 @@ type ConstructionBoardCardProps = {
   item: Construction
   onEdit: (construction: Construction) => void | Promise<void>
   onArchive: (construction: Construction) => void
+  onRetrieve?: (constructionId: number) => void
   canManage: boolean
 }
 
@@ -27,7 +28,7 @@ const statusLabel: Record<ConstructionStatus, string> = {
   COMPLETED: 'Finalizada',
 }
 
-export function ConstructionBoardCard({ item, onEdit, onArchive, canManage }: ConstructionBoardCardProps) {
+export function ConstructionBoardCard({ item, onEdit, onArchive, onRetrieve, canManage }: ConstructionBoardCardProps) {
   const [isMenuOpen, setMenuOpen] = useState(false)
   const menuRef = useRef<HTMLDivElement | null>(null)
 
@@ -96,17 +97,31 @@ export function ConstructionBoardCard({ item, onEdit, onArchive, canManage }: Co
                   <Pencil size={14} />
                   Editar
                 </button>
-                <button
-                  type="button"
-                  className="board-card__menu-item board-card__menu-item--danger"
-                  onClick={() => {
-                    setMenuOpen(false)
-                    onArchive(item)
-                  }}
-                >
-                  <Archive size={14} />
-                  Arquivar
-                </button>
+                {onRetrieve ? (
+                  <button
+                    type="button"
+                    className="board-card__menu-item"
+                    onClick={() => {
+                      setMenuOpen(false)
+                      onRetrieve(item.id)
+                    }}
+                  >
+                    <RotateCcw size={14} />
+                    Recuperar
+                  </button>
+                ) : (
+                  <button
+                    type="button"
+                    className="board-card__menu-item board-card__menu-item--danger"
+                    onClick={() => {
+                      setMenuOpen(false)
+                      onArchive(item)
+                    }}
+                  >
+                    <Archive size={14} />
+                    Arquivar
+                  </button>
+                )}
               </div>
             ) : null}
           </div>

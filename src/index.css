@@ -664,6 +664,11 @@ a {
   gap: 16px;
 }
 
+.topbar__actions {
+  justify-content: flex-end;
+  flex: 1;
+}
+
 .topbar h1 {
   margin: 4px 0 0;
   font-size: 2rem;
@@ -671,26 +676,30 @@ a {
   font-family: 'Sora', 'Segoe UI', sans-serif;
 }
 
-.search-box {
-  width: min(280px, 100%);
+.topbar__context-card {
+  width: min(360px, 100%);
   display: flex;
-  align-items: center;
-  gap: 10px;
-  padding: 0 14px;
-  height: 48px;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 4px;
+  padding: 10px 14px;
+  min-height: 48px;
   border-radius: 16px;
-  background: rgba(255, 255, 255, 0.82);
-  border: 1px solid rgba(16, 43, 72, 0.1);
-  color: #58728b;
+  background: rgba(255, 255, 255, 0.84);
+  border: 1px solid rgba(22, 50, 69, 0.1);
+  color: #5F7686;
 }
 
-.search-box input {
-  border: 0;
-  background: transparent;
-  width: 100%;
-  font: inherit;
-  color: #26445e;
-  outline: none;
+.topbar__context-card strong {
+  color: #163245;
+  font-family: 'Sora', 'Segoe UI', sans-serif;
+  font-size: 0.84rem;
+}
+
+.topbar__context-card span {
+  color: #5F7686;
+  font-size: 0.83rem;
+  line-height: 1.35;
 }
 
 .icon-button {
@@ -1995,6 +2004,12 @@ a {
   gap: 12px;
 }
 
+.team-directory-card__badges {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+
 .team-directory-card__identity {
   display: inline-flex;
   align-items: center;
@@ -2029,6 +2044,36 @@ a {
   gap: 10px;
 }
 
+.team-directory-card__actions {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.team-role-editor {
+  margin-top: 10px;
+  display: grid;
+  gap: 8px;
+}
+
+.team-role-editor__label {
+  font-size: 0.76rem;
+  font-weight: 700;
+  color: var(--text-muted);
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.team-role-editor__controls {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.team-role-editor__controls .select-field {
+  min-width: 172px;
+}
+
 .team-directory-card__archive {
   min-height: 34px;
   padding: 0 12px;
@@ -2060,6 +2105,37 @@ a {
 .team-role-pill--user {
   background: rgba(47, 122, 79, 0.12);
   color: #2f7a4f;
+}
+
+.team-toolbar-row {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+
+.team-toolbar-row .clients-search-field {
+  flex: 1;
+}
+
+.team-role-edit-modal {
+  display: grid;
+  gap: 16px;
+}
+
+.team-role-edit-modal__identity {
+  display: grid;
+  gap: 4px;
+}
+
+.team-role-edit-modal__identity strong {
+  color: #17324b;
+  font-family: var(--font-heading);
+}
+
+.team-role-edit-modal__identity span {
+  color: #58728b;
+  font-size: 0.92rem;
 }
 
 .team-summary-cards {
@@ -2098,6 +2174,28 @@ a {
   background: rgba(243, 247, 253, 0.92);
   border: 1px solid rgba(133, 171, 214, 0.2);
   color: #58728b;
+}
+
+.client-card__badge--archived {
+  background: rgba(96, 108, 123, 0.14);
+  color: #5b6776;
+}
+
+.team-readonly-note {
+  display: grid;
+  gap: 4px;
+  padding: 12px 14px;
+  border-radius: 14px;
+  border: 1px solid rgba(22, 50, 69, 0.1);
+  background: rgba(243, 247, 249, 0.92);
+}
+
+.team-readonly-note strong {
+  color: #163245;
+}
+
+.team-readonly-note span {
+  color: #5F7686;
 }
 
 .team-register-form {
@@ -2639,6 +2737,7 @@ a {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 16px;
+  align-items: start;
 }
 
 .field--client-select {
@@ -2673,12 +2772,18 @@ a {
 }
 
 .field-help {
+  display: block;
   color: #7e92a3;
   font-size: 0.83rem;
+  line-height: 1.2;
 }
 
 .field-help--error {
   color: #d45f49;
+}
+
+.field-help--inline-error {
+  margin-top: 0.35rem;
 }
 
 .success-copy {
@@ -3888,10 +3993,6 @@ a {
     align-items: stretch;
   }
 
-  .works-board-toolbar .search-field--works-page {
-    width: 100%;
-  }
-
   .works-board-toolbar__filters {
     justify-content: flex-start;
   }
@@ -3999,14 +4100,8 @@ a {
     gap: 0.5rem;
   }
 
-  .topbar__actions .icon-button {
-    display: none;
-  }
-
-  .search-box {
-    height: 44px;
-    border-radius: 13px;
-    padding: 0 12px;
+  .topbar__context-card {
+    width: 100%;
   }
 
   .page-stack {
@@ -4274,10 +4369,6 @@ a {
     width: 40px;
     height: 40px;
     border-radius: 12px;
-  }
-
-  .search-box {
-    height: 42px;
   }
 
   .hero-mini-stats__item strong {

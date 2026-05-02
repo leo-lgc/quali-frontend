@@ -72,7 +72,7 @@ export function MaterialsModal({
           <div>
             <h3 className="panel__title">Itens cadastrados</h3>
             <p className="panel__copy">
-              {availableCount} de {materials.length} disponiveis.
+              {availableCount} de {materials.length} disponíveis.
             </p>
           </div>
           <span className="weather-pill">

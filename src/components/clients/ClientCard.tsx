@@ -1,4 +1,4 @@
-import { Archive, Building2, Mail, Pencil, Phone } from 'lucide-react'
+import { Archive, Building2, Mail, Pencil, Phone, RotateCcw } from 'lucide-react'
 
 type Client = {
   id: number
@@ -11,9 +11,11 @@ type ClientCardProps = {
   client: Client
   onEdit: (client: Client) => void
   onArchive: (client: Client) => void
+  onRetrieve?: (clientId: number) => void
+  isArchived?: boolean
 }
 
-export function ClientCard({ client, onEdit, onArchive }: ClientCardProps) {
+export function ClientCard({ client, onEdit, onArchive, onRetrieve, isArchived = false }: ClientCardProps) {
   return (
     <article className="client-card">
       <div className="client-card__top">
@@ -21,7 +23,9 @@ export function ClientCard({ client, onEdit, onArchive }: ClientCardProps) {
           <div className="client-card__icon">
             <Building2 size={18} />
           </div>
-          <span className="client-card__badge">Ativo</span>
+          <span className={isArchived ? 'client-card__badge client-card__badge--archived' : 'client-card__badge'}>
+            {isArchived ? 'Arquivado' : 'Ativo'}
+          </span>
         </div>
 
         <div className="client-card__actions">
@@ -34,15 +38,27 @@ export function ClientCard({ client, onEdit, onArchive }: ClientCardProps) {
             <Pencil size={16} />
             Editar
           </button>
-          <button
-            type="button"
-            className="ghost-page-button secondary-page-button--compact"
-            onClick={() => onArchive(client)}
-            aria-label={`Arquivar cliente ${client.name}`}
-          >
-            <Archive size={16} />
-            Arquivar
-          </button>
+          {onRetrieve ? (
+            <button
+              type="button"
+              className="ghost-page-button secondary-page-button--compact"
+              onClick={() => onRetrieve(client.id)}
+              aria-label={`Recuperar cliente ${client.name}`}
+            >
+              <RotateCcw size={16} />
+              Recuperar
+            </button>
+          ) : (
+            <button
+              type="button"
+              className="ghost-page-button secondary-page-button--compact"
+              onClick={() => onArchive(client)}
+              aria-label={`Arquivar cliente ${client.name}`}
+            >
+              <Archive size={16} />
+              Arquivar
+            </button>
+          )}
         </div>
       </div>
 

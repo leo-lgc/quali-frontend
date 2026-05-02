@@ -880,7 +880,8 @@ export function ConstructionDetailPage() {
         <article className="work-overview-card detail-side-actions">
           <div className="work-overview-card__header">
             <div>
-              <h3>O que normalmente procuram aqui</h3>
+              <h3>{canManageConstruction ? 'Atalhos da operação' : 'Consultas rápidas'}</h3>
+              <p>{canManageConstruction ? 'Acesse os pontos mais usados do acompanhamento desta obra.' : 'Abra os módulos mais consultados desta obra.'}</p>
             </div>
           </div>
 
@@ -1081,7 +1082,7 @@ function buildTeamMetric(report: ReportResponse) {
 function buildMaterialMetric(materials: Material[]) {
   if (!materials.length) return 'Pedido inicial em aprovação'
   const available = materials.filter((material) => material.isAvailable).length
-  return `${available} de ${materials.length} itens disponiveis`
+  return `${available} de ${materials.length} itens disponíveis`
 }
 
 function formatMaterialAmount(value: number) {

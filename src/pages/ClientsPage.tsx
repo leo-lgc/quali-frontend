@@ -28,6 +28,8 @@ type ClientFormState = {
   phone: string
 }
 
+type ClientScope = 'ACTIVE' | 'ARCHIVED'
+
 const initialForm: ClientFormState = {
   name: '',
   email: '',
@@ -56,6 +58,7 @@ export function ClientsPage() {
   const [selectedClient, setSelectedClient] = useState<Client | null>(null)
   const [isEditModalOpen, setIsEditModalOpen] = useState(false)
   const [isArchiveModalOpen, setIsArchiveModalOpen] = useState(false)
+  const [scope, setScope] = useState<ClientScope>('ACTIVE')
 
   useEffect(() => {
     const timeoutId = window.setTimeout(() => setDebouncedSearch(search.trim()), 250)
@@ -64,7 +67,7 @@ export function ClientsPage() {
 
   useEffect(() => {
     void loadClients(1, debouncedSearch)
-  }, [token, debouncedSearch])
+  }, [token, debouncedSearch, scope])
 
   async function loadClients(page = currentPage, query = debouncedSearch) {
     setIsLoading(true)
@@ -74,14 +77,15 @@ export function ClientsPage() {
       const params = new URLSearchParams({ page: String(page - 1), size: String(clientsPageSize) })
       if (query) params.set('query', query)
 
-      const response = await apiRequest<PageResponse<Client>>(`/client?${params.toString()}`, { token })
+      const endpoint = scope === 'ARCHIVED' ? '/client/deleted' : '/client'
+      const response = await apiRequest<PageResponse<Client>>(`${endpoint}?${params.toString()}`, { token })
       setClients(response.content ?? [])
       setCurrentPage(response.number + 1)
       setTotalFilteredClients(response.totalElements)
 
       if (query) {
         const totalResponse = await apiRequest<PageResponse<Client>>(`/client?page=0&size=1`, { token })
-        setTotalClients(totalResponse.totalElements)
+        setTotalClients(scope === 'ARCHIVED' ? response.totalElements : totalResponse.totalElements)
       } else {
         setTotalClients(response.totalElements)
       }
@@ -191,7 +195,7 @@ export function ClientsPage() {
     setModalError('')
 
     try {
-      await apiRequest(`/client/delete/soft/${selectedClient.id}`, {
+      await apiRequest(`/client/soft/${selectedClient.id}`, {
         method: 'DELETE',
         token,
       })
@@ -226,7 +230,25 @@ export function ClientsPage() {
 
   useEffect(() => {
     setCurrentPage(1)
-  }, [debouncedSearch])
+  }, [debouncedSearch, scope])
+
+  async function handleRetrieveClient(clientId: number) {
+    try {
+      await apiRequest(`/client/retrieve/${clientId}`, {
+        method: 'PATCH',
+        token,
+      })
+
+      toast.success('Cliente recuperado com sucesso.')
+      await loadClients(currentPage, debouncedSearch)
+    } catch (err) {
+      if (err instanceof ApiError) {
+        setError(err.message)
+      } else {
+        setError('Não foi possível recuperar o cliente.')
+      }
+    }
+  }
 
   const totalPages = Math.max(1, Math.ceil(totalFilteredClients / clientsPageSize))
 
@@ -243,7 +265,7 @@ export function ClientsPage() {
             <div className="hero-mini-stats quali-mini-stats">
               <div className="hero-mini-stats__item">
                 <strong>{clients.length}</strong>
-                <span>Nesta pagina</span>
+                <span>Nesta página</span>
               </div>
               <div className="hero-mini-stats__item">
                 <strong>{totalClients}</strong>
@@ -267,18 +289,36 @@ export function ClientsPage() {
               </div>
             </div>
 
-            <label className="search-field search-field--board clients-search-field">
-              <span className="sr-only">Buscar cliente</span>
-              <span className="clients-search-field__icon" aria-hidden="true">
-                <Search size={16} />
-              </span>
-              <input
-                type="search"
-                value={search}
-                onChange={(event) => setSearch(event.target.value)}
-                placeholder="Buscar cliente por nome, email ou telefone"
-              />
-            </label>
+            <div className="team-toolbar-row">
+              <label className="search-field search-field--board clients-search-field">
+                <span className="sr-only">Buscar cliente</span>
+                <span className="clients-search-field__icon" aria-hidden="true">
+                  <Search size={16} />
+                </span>
+                <input
+                  type="search"
+                  value={search}
+                  onChange={(event) => setSearch(event.target.value)}
+                  placeholder="Buscar cliente por nome, email ou telefone"
+                />
+              </label>
+              <div className="works-board-toolbar__filters" role="tablist" aria-label="Filtrar clientes por situação">
+                <button
+                  type="button"
+                  className={scope === 'ACTIVE' ? 'board-filter-pill board-filter-pill--active' : 'board-filter-pill'}
+                  onClick={() => setScope('ACTIVE')}
+                >
+                  Ativos
+                </button>
+                <button
+                  type="button"
+                  className={scope === 'ARCHIVED' ? 'board-filter-pill board-filter-pill--active' : 'board-filter-pill'}
+                  onClick={() => setScope('ARCHIVED')}
+                >
+                  Arquivados
+                </button>
+              </div>
+            </div>
             {isLoading ? <p className="feedback">Carregando clientes...</p> : null}
             {!isLoading && error ? <p className="form-error">{error}</p> : null}
 
@@ -286,7 +326,14 @@ export function ClientsPage() {
               <div className="clients-list">
                 {clients.length ? (
                   clients.map((client) => (
-                    <ClientCard key={client.id} client={client} onEdit={openEditModal} onArchive={openArchiveModal} />
+                    <ClientCard
+                      key={client.id}
+                      client={client}
+                      onEdit={openEditModal}
+                      onArchive={openArchiveModal}
+                      onRetrieve={scope === 'ARCHIVED' ? handleRetrieveClient : undefined}
+                      isArchived={scope === 'ARCHIVED'}
+                    />
                   ))
                 ) : (
                   <p className="feedback">Nenhum cliente encontrado para o filtro atual.</p>
@@ -303,7 +350,7 @@ export function ClientsPage() {
                       Anterior
                     </button>
                     <span className="list-pagination__status">
-                      Pagina {currentPage} de {totalPages}
+                      Página {currentPage} de {totalPages}
                     </span>
                     <button
                       type="button"
@@ -311,7 +358,7 @@ export function ClientsPage() {
                       onClick={() => void loadClients(currentPage + 1, debouncedSearch)}
                       disabled={currentPage === totalPages}
                     >
-                      Proxima
+                      Próxima
                     </button>
                   </div>
                 ) : null}
