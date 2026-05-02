@@ -456,6 +456,14 @@ export function ConstructionsPage() {
       setIsSubmitting(false)
       return
     }
+
+    if (isStartDateAfterEndDate(form.startDate, form.endDate)) {
+      setStartDateFieldError('A data de início não pode ser maior que a data de fim.')
+      setEndDateFieldError('A data de fim deve ser igual ou posterior à data de início.')
+      setModalStep('details')
+      setIsSubmitting(false)
+      return
+    }
     setModalStep('address')
   }
 
@@ -968,4 +976,18 @@ function hasLetters(value: string) {
 
 function isCompleteDate(value: string) {
   return /^\d{2}\/\d{2}\/\d{4}$/.test(value.trim())
+}
+
+function isStartDateAfterEndDate(startDate: string, endDate: string) {
+  const start = parseBrDateToNumber(startDate)
+  const end = parseBrDateToNumber(endDate)
+  if (start === null || end === null) return false
+  return start > end
+}
+
+function parseBrDateToNumber(value: string) {
+  const [day, month, year] = value.split('/')
+  if (!day || !month || !year) return null
+  const date = Date.UTC(Number(year), Number(month) - 1, Number(day))
+  return Number.isNaN(date) ? null : date
 }

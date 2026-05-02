@@ -2786,6 +2786,43 @@ a {
   margin-top: 0.35rem;
 }
 
+.date-field-row {
+  position: relative;
+  display: grid;
+}
+
+.date-field-row input[type='text'] {
+  padding-right: 42px;
+}
+
+.date-picker-trigger {
+  position: absolute;
+  top: 50%;
+  right: 8px;
+  transform: translateY(-50%);
+  width: 30px;
+  height: 30px;
+  border: 0;
+  border-radius: 10px;
+  display: grid;
+  place-items: center;
+  background: rgba(31, 94, 122, 0.12);
+  color: #1F5E7A;
+  cursor: pointer;
+}
+
+.date-picker-trigger:hover {
+  background: rgba(31, 94, 122, 0.18);
+}
+
+.native-date-picker {
+  position: absolute;
+  opacity: 0;
+  pointer-events: none;
+  width: 1px;
+  height: 1px;
+}
+
 .success-copy {
   margin: 0;
   color: #2f7a4f;

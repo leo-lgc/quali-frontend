@@ -1,3 +1,6 @@
+import { CalendarDays } from 'lucide-react'
+import { useRef } from 'react'
+
 type ClientOption = {
   id: number
   name: string
@@ -31,6 +34,9 @@ type ConstructionDetailsFieldsProps = {
 }
 
 export function ConstructionDetailsFields({ form, clients, clientError = '', nameError = '', localContactError = '', startDateError = '', endDateError = '', onChange }: ConstructionDetailsFieldsProps) {
+  const startDatePickerRef = useRef<HTMLInputElement | null>(null)
+  const endDatePickerRef = useRef<HTMLInputElement | null>(null)
+
   return (
     <div className="works-form__grid">
       <label className="field">
@@ -69,29 +75,67 @@ export function ConstructionDetailsFields({ form, clients, clientError = '', nam
 
       <label className="field">
         <span>Data de início</span>
-        <input
-          type="text"
-          inputMode="numeric"
-          value={form.startDate}
-          onChange={(event) => onChange('startDate', formatDateMask(event.target.value))}
-          placeholder="dd/mm/aaaa"
-          className={startDateError ? 'input-error' : undefined}
-          required
-        />
+        <div className="date-field-row">
+          <input
+            type="text"
+            inputMode="numeric"
+            value={form.startDate}
+            onChange={(event) => onChange('startDate', formatDateMask(event.target.value))}
+            placeholder="dd/mm/aaaa"
+            className={startDateError ? 'input-error' : undefined}
+            required
+          />
+          <button
+            type="button"
+            className="date-picker-trigger"
+            aria-label="Selecionar data de início"
+            onClick={() => openNativeDatePicker(startDatePickerRef.current)}
+          >
+            <CalendarDays size={16} />
+          </button>
+          <input
+            ref={startDatePickerRef}
+            type="date"
+            className="native-date-picker"
+            value={toIsoDate(form.startDate)}
+            onChange={(event) => onChange('startDate', toBrDate(event.target.value))}
+            tabIndex={-1}
+            aria-hidden="true"
+          />
+        </div>
         {startDateError ? <small className="field-help field-help--error field-help--inline-error">{startDateError}</small> : null}
       </label>
 
       <label className="field">
         <span>Data de fim</span>
-        <input
-          type="text"
-          inputMode="numeric"
-          value={form.endDate}
-          onChange={(event) => onChange('endDate', formatDateMask(event.target.value))}
-          placeholder="dd/mm/aaaa"
-          className={endDateError ? 'input-error' : undefined}
-          required
-        />
+        <div className="date-field-row">
+          <input
+            type="text"
+            inputMode="numeric"
+            value={form.endDate}
+            onChange={(event) => onChange('endDate', formatDateMask(event.target.value))}
+            placeholder="dd/mm/aaaa"
+            className={endDateError ? 'input-error' : undefined}
+            required
+          />
+          <button
+            type="button"
+            className="date-picker-trigger"
+            aria-label="Selecionar data de fim"
+            onClick={() => openNativeDatePicker(endDatePickerRef.current)}
+          >
+            <CalendarDays size={16} />
+          </button>
+          <input
+            ref={endDatePickerRef}
+            type="date"
+            className="native-date-picker"
+            value={toIsoDate(form.endDate)}
+            onChange={(event) => onChange('endDate', toBrDate(event.target.value))}
+            tabIndex={-1}
+            aria-hidden="true"
+          />
+        </div>
         {endDateError ? <small className="field-help field-help--error field-help--inline-error">{endDateError}</small> : null}
       </label>
     </div>
@@ -103,4 +147,28 @@ function formatDateMask(value: string) {
   if (digits.length <= 2) return digits
   if (digits.length <= 4) return `${digits.slice(0, 2)}/${digits.slice(2)}`
   return `${digits.slice(0, 2)}/${digits.slice(2, 4)}/${digits.slice(4)}`
+}
+
+function toIsoDate(value: string) {
+  const [day, month, year] = value.split('/')
+  if (!day || !month || !year) return ''
+  return `${year}-${month.padStart(2, '0')}-${day.padStart(2, '0')}`
+}
+
+function toBrDate(value: string) {
+  const [year, month, day] = value.split('-')
+  if (!day || !month || !year) return ''
+  return `${day}/${month}/${year}`
+}
+
+function openNativeDatePicker(input: HTMLInputElement | null) {
+  if (!input) return
+  const pickerInput = input as HTMLInputElement & { showPicker?: () => void }
+
+  if (typeof pickerInput.showPicker === 'function') {
+    pickerInput.showPicker()
+    return
+  }
+  pickerInput.focus()
+  pickerInput.click()
 }
