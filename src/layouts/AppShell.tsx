@@ -1,4 +1,4 @@
-import { ChevronLeft, ChevronRight, HardHat, MapPinned, Menu, ShieldUser, Users, X } from 'lucide-react'
+import { Boxes, ChevronLeft, ChevronRight, HardHat, MapPinned, Menu, ShieldUser, Users, X } from 'lucide-react'
 import { useEffect, useState } from 'react'
 import { NavLink, Outlet, useLocation } from 'react-router-dom'
 import { type AppRole, useAuth } from '../features/auth/AuthContext'
@@ -7,6 +7,7 @@ const navigationItems = [
   { to: '/obras', label: 'Obras', icon: MapPinned, enabled: true, roles: ['ADMIN', 'MANAGER', 'USER'] as AppRole[] },
   { to: '/clientes', label: 'Clientes', icon: ShieldUser, enabled: true, roles: ['ADMIN', 'MANAGER'] as AppRole[] },
   { to: '/equipe', label: 'Equipe', icon: Users, enabled: true, roles: ['ADMIN', 'MANAGER'] as AppRole[] },
+  { to: '/estoque', label: 'Estoque', icon: Boxes, enabled: true, roles: ['ADMIN', 'MANAGER', 'USER'] as AppRole[] },
 ]
 
 export function AppShell() {
@@ -43,8 +44,10 @@ export function AppShell() {
     ? 'Obras'
     : location.pathname.startsWith('/clientes')
       ? 'Clientes'
-    : location.pathname.startsWith('/equipe')
+      : location.pathname.startsWith('/equipe')
         ? 'Equipe'
+      : location.pathname.startsWith('/estoque')
+        ? 'Estoque'
       : 'Quali'
   const userName = user?.name?.trim() || 'Usuário'
   const userRole = formatRoleLabel(user?.role)
@@ -176,5 +179,6 @@ function buildTopbarHint(pathname: string, role: AppRole | null | undefined) {
   if (pathname.startsWith('/obras')) return role === 'USER' ? 'Painel restrito às obras da sua equipe.' : 'Painel executivo com filtros, status e atalhos da operação.'
   if (pathname.startsWith('/clientes')) return 'Base ativa de clientes para cadastro, edição e arquivamento.'
   if (pathname.startsWith('/equipe')) return role === 'ADMIN' ? 'Gerencie colaboradores e perfis de acesso do sistema.' : 'Acompanhe colaboradores ativos e gerencie a operação da equipe.'
+  if (pathname.startsWith('/estoque')) return role === 'USER' ? 'Consulta do estoque global da empresa.' : 'Cadastre itens e registre entradas e saídas do estoque global.'
   return 'Painel principal do sistema.'
 }

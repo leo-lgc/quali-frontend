@@ -6,6 +6,7 @@ import { LoginPage } from '../pages/LoginPage'
 import { ConstructionsPage } from '../pages/ConstructionsPage'
 import { ConstructionDetailPage } from '../pages/ConstructionDetailPage'
 import { TeamPage } from '../pages/TeamPage'
+import { StockPage } from '../pages/StockPage'
 
 export function AppRouter() {
   return (
@@ -24,6 +25,7 @@ export function AppRouter() {
         <Route path="/obras/:constructionId" element={<ConstructionDetailPage />} />
         <Route path="/clientes" element={<ProtectedRoute allowedRoles={['ADMIN', 'MANAGER']} deniedMessage="Você não pode acessar a tela de clientes."><ClientsPage /></ProtectedRoute>} />
         <Route path="/equipe" element={<ProtectedRoute allowedRoles={['ADMIN', 'MANAGER']} deniedMessage="Você não pode acessar a tela de equipe."><TeamPage /></ProtectedRoute>} />
+        <Route path="/estoque" element={<StockPage />} />
       </Route>
       <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>
