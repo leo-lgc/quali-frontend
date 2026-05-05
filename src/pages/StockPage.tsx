@@ -33,8 +33,14 @@ type MovementForm = {
   type: MoveType
   quantity: string
   unitCost: string
-  constructionName: string
+  constructionId: string
   note: string
+}
+
+type ConstructionOption = {
+  id: number
+  name: string
+  status: 'SCHEDULED' | 'IN_PROGRESS' | 'COMPLETED'
 }
 
 type PageResponse<T> = {
@@ -44,8 +50,46 @@ type PageResponse<T> = {
   number: number
 }
 
-const initialStockForm: StockForm = { name: '', sku: '', category: '', unit: 'un', averageCost: '0', supplier: '' }
-const initialMovement: MovementForm = { type: 'ENTRY_PURCHASE', quantity: '', unitCost: '', constructionName: '', note: '' }
+const stockCategoryOptions = [
+  'Insumos',
+  'Ferramentas',
+  'EPI',
+  'Eletrica',
+  'Hidraulica',
+  'Acabamento',
+  'Estrutural',
+  'Pintura',
+  'Limpeza',
+  'Sinalizacao',
+  'Manutencao',
+  'Almoxarifado',
+] as const
+
+const stockUnitOptions = [
+  'un',
+  'kg',
+  'g',
+  'mg',
+  't',
+  'm',
+  'cm',
+  'mm',
+  'm2',
+  'm3',
+  'L',
+  'mL',
+  'caixa',
+  'pacote',
+  'fardo',
+  'rolo',
+  'barra',
+  'saco',
+  'par',
+  'kit',
+] as const
+
+const initialStockForm: StockForm = { name: '', sku: '', category: '', unit: '', averageCost: '0', supplier: '' }
+const initialMovement: MovementForm = { type: 'ENTRY_PURCHASE', quantity: '', unitCost: '', constructionId: '', note: '' }
 
 export function StockPage() {
   const { token, user } = useAuth()
@@ -63,11 +107,14 @@ export function StockPage() {
   const [itemForm, setItemForm] = useState<StockForm>(initialStockForm)
   const [editingItem, setEditingItem] = useState<StockItem | null>(null)
   const [isSaving, setIsSaving] = useState(false)
+  const [itemFieldErrors, setItemFieldErrors] = useState<Partial<Record<keyof StockForm, string>>>({})
 
   const [isMoveModalOpen, setIsMoveModalOpen] = useState(false)
   const [movementForm, setMovementForm] = useState<MovementForm>(initialMovement)
   const [selectedItem, setSelectedItem] = useState<StockItem | null>(null)
   const [isMoving, setIsMoving] = useState(false)
+  const [movementFieldErrors, setMovementFieldErrors] = useState<Partial<Record<keyof MovementForm, string>>>({})
+  const [constructionOptions, setConstructionOptions] = useState<ConstructionOption[]>([])
 
   const [isArchiveModalOpen, setIsArchiveModalOpen] = useState(false)
 
@@ -79,6 +126,11 @@ export function StockPage() {
   useEffect(() => {
     void loadItems(debouncedSearch)
   }, [scope, debouncedSearch])
+
+  useEffect(() => {
+    if (!canEdit) return
+    void loadConstructionOptions()
+  }, [canEdit])
 
   async function loadItems(query = debouncedSearch) {
     setIsLoading(true)
@@ -96,9 +148,30 @@ export function StockPage() {
     }
   }
 
+  async function loadConstructionOptions() {
+    try {
+      const response = await apiRequest<PageResponse<ConstructionOption>>('/construction?page=0&size=80', { token })
+      const activeConstructions = (response.content ?? []).filter((construction) => construction.status !== 'COMPLETED')
+      setConstructionOptions(activeConstructions)
+    } catch {
+      setConstructionOptions([])
+    }
+  }
+
+  function handleItemFieldChange(field: keyof StockForm, value: string) {
+    setItemFieldErrors((current) => ({ ...current, [field]: '' }))
+    setItemForm((current) => ({ ...current, [field]: value }))
+  }
+
+  function handleMovementFieldChange(field: keyof MovementForm, value: string) {
+    setMovementFieldErrors((current) => ({ ...current, [field]: '' }))
+    setMovementForm((current) => ({ ...current, [field]: value }))
+  }
+
   function openCreateItem() {
     setEditingItem(null)
     setItemForm(initialStockForm)
+    setItemFieldErrors({})
     setIsItemModalOpen(true)
   }
 
@@ -112,13 +185,21 @@ export function StockPage() {
       averageCost: String(item.averageCost ?? 0),
       supplier: item.supplier ?? '',
     })
+    setItemFieldErrors({})
     setIsItemModalOpen(true)
   }
 
   async function saveItem(event: FormEvent<HTMLFormElement>) {
     event.preventDefault()
+    const validationErrors = validateStockForm(itemForm)
+    if (Object.keys(validationErrors).length) {
+      setItemFieldErrors(validationErrors)
+      return
+    }
+
     setIsSaving(true)
     setError('')
+    setItemFieldErrors({})
     try {
       const payload = {
         name: itemForm.name.trim(),
@@ -172,14 +253,25 @@ export function StockPage() {
   function openMovement(item: StockItem, type: MoveType) {
     setSelectedItem(item)
     setMovementForm({ ...initialMovement, type })
+    setMovementFieldErrors({})
     setIsMoveModalOpen(true)
   }
 
   async function saveMovement(event: FormEvent<HTMLFormElement>) {
     event.preventDefault()
     if (!selectedItem) return
+
+    const validationErrors = validateMovementForm(movementForm)
+    if (Object.keys(validationErrors).length) {
+      setMovementFieldErrors(validationErrors)
+      return
+    }
+
     setIsMoving(true)
+    setMovementFieldErrors({})
     try {
+      const selectedConstruction = constructionOptions.find((construction) => String(construction.id) === movementForm.constructionId)
+
       await apiRequest('/stock/movement', {
         method: 'POST',
         token,
@@ -189,7 +281,7 @@ export function StockPage() {
           type: movementForm.type,
           quantity: Number(movementForm.quantity || '0'),
           unitCost: movementForm.type === 'ENTRY_PURCHASE' && movementForm.unitCost ? Number(movementForm.unitCost) : null,
-          constructionName: movementForm.type === 'EXIT_CONSTRUCTION' ? movementForm.constructionName.trim() : null,
+          constructionName: movementForm.type === 'EXIT_CONSTRUCTION' ? selectedConstruction?.name ?? null : null,
           note: movementForm.note.trim() || null,
         }),
       })
@@ -338,7 +430,7 @@ export function StockPage() {
           <section className="stock-item-hero-card">
             <div className="stock-item-hero-card__identity">
               <strong>{itemForm.name.trim() || (editingItem ? 'Atualize o item' : 'Novo item de estoque')}</strong>
-              <span>{itemForm.category.trim() || 'Defina a categoria'} · {itemForm.unit.trim() || 'Unidade pendente'}</span>
+              <span>{itemForm.category.trim() || 'Defina a categoria'} · {itemForm.unit.trim() || 'Selecione a unidade'}</span>
             </div>
             <div className="stock-item-hero-card__metrics">
               <div>
@@ -353,16 +445,17 @@ export function StockPage() {
           </section>
 
           <div className="clients-modal__grid stock-item-grid">
-            <label className="field"><span>Nome</span><input value={itemForm.name} onChange={(e) => setItemForm((c) => ({ ...c, name: e.target.value }))} placeholder="Ex.: Cimento CPII 50kg" required /></label>
+            <label className="field"><span>Nome</span><input value={itemForm.name} onChange={(e) => handleItemFieldChange('name', e.target.value)} placeholder="Ex.: Cimento CPII 50kg" className={itemFieldErrors.name ? 'input-error' : undefined} required />{itemFieldErrors.name ? <small className="field-help field-help--error field-help--inline-error">{itemFieldErrors.name}</small> : null}</label>
             <label className="field">
               <span>SKU</span>
-              <input value={itemForm.sku} onChange={(e) => setItemForm((c) => ({ ...c, sku: e.target.value }))} placeholder="Opcional. Gerado automaticamente se vazio" />
+              <input value={itemForm.sku} onChange={(e) => handleItemFieldChange('sku', e.target.value)} placeholder="Opcional. Gerado automaticamente se vazio" className={itemFieldErrors.sku ? 'input-error' : undefined} />
+              {itemFieldErrors.sku ? <small className="field-help field-help--error field-help--inline-error">{itemFieldErrors.sku}</small> : null}
               <small className="field-help">Se deixar em branco, o sistema cria um SKU unico com base na categoria e no nome.</small>
             </label>
-            <label className="field"><span>Categoria</span><input value={itemForm.category} onChange={(e) => setItemForm((c) => ({ ...c, category: e.target.value }))} placeholder="Ex.: Insumos, EPI, Ferramentas" required /></label>
-            <label className="field"><span>Unidade</span><input value={itemForm.unit} onChange={(e) => setItemForm((c) => ({ ...c, unit: e.target.value }))} placeholder="Ex.: un, kg, m, caixa" required /></label>
-            <label className="field"><span>Custo médio</span><input type="number" step="0.01" min="0" value={itemForm.averageCost} onChange={(e) => setItemForm((c) => ({ ...c, averageCost: e.target.value }))} placeholder="0,00" required /></label>
-            <label className="field"><span>Fornecedor</span><input value={itemForm.supplier} onChange={(e) => setItemForm((c) => ({ ...c, supplier: e.target.value }))} placeholder="Fornecedor principal ou referencia" /></label>
+            <label className="field"><span>Categoria</span><select className={itemFieldErrors.category ? 'select-field input-error' : 'select-field'} value={itemForm.category} onChange={(e) => handleItemFieldChange('category', e.target.value)} required><option value="">Selecione a categoria</option>{stockCategoryOptions.map((option) => <option key={option} value={option}>{option}</option>)}</select>{itemFieldErrors.category ? <small className="field-help field-help--error field-help--inline-error">{itemFieldErrors.category}</small> : null}</label>
+            <label className="field"><span>Unidade</span><select className={itemFieldErrors.unit ? 'select-field input-error' : 'select-field'} value={itemForm.unit} onChange={(e) => handleItemFieldChange('unit', e.target.value)} required><option value="">Selecione a unidade</option>{stockUnitOptions.map((option) => <option key={option} value={option}>{option}</option>)}</select>{itemFieldErrors.unit ? <small className="field-help field-help--error field-help--inline-error">{itemFieldErrors.unit}</small> : null}</label>
+            <label className="field"><span>Custo médio</span><input type="number" step="0.01" min="0" value={itemForm.averageCost} onChange={(e) => handleItemFieldChange('averageCost', e.target.value)} placeholder="0,00" className={itemFieldErrors.averageCost ? 'input-error' : undefined} required />{itemFieldErrors.averageCost ? <small className="field-help field-help--error field-help--inline-error">{itemFieldErrors.averageCost}</small> : null}</label>
+            <label className="field"><span>Fornecedor</span><input value={itemForm.supplier} onChange={(e) => handleItemFieldChange('supplier', e.target.value)} placeholder="Fornecedor principal ou referencia" className={itemFieldErrors.supplier ? 'input-error' : undefined} />{itemFieldErrors.supplier ? <small className="field-help field-help--error field-help--inline-error">{itemFieldErrors.supplier}</small> : null}</label>
           </div>
 
           <div className="stock-item-note">
@@ -408,21 +501,27 @@ export function StockPage() {
           <div className="clients-modal__grid stock-movement-grid">
             <label className="field">
               <span>Quantidade</span>
-              <input type="number" min="0.01" step="0.01" value={movementForm.quantity} onChange={(e) => setMovementForm((c) => ({ ...c, quantity: e.target.value }))} required />
+              <input type="number" min="0.01" step="0.01" value={movementForm.quantity} onChange={(e) => handleMovementFieldChange('quantity', e.target.value)} className={movementFieldErrors.quantity ? 'input-error' : undefined} required />
+              {movementFieldErrors.quantity ? <small className="field-help field-help--error field-help--inline-error">{movementFieldErrors.quantity}</small> : null}
               <small className="field-help">Informe a quantidade em {selectedItem?.unit || 'unidade'}.</small>
             </label>
 
             {movementForm.type === 'ENTRY_PURCHASE' ? (
               <label className="field">
                 <span>Custo unitário</span>
-                <input type="number" min="0" step="0.01" value={movementForm.unitCost} onChange={(e) => setMovementForm((c) => ({ ...c, unitCost: e.target.value }))} />
+                <input type="number" min="0" step="0.01" value={movementForm.unitCost} onChange={(e) => handleMovementFieldChange('unitCost', e.target.value)} className={movementFieldErrors.unitCost ? 'input-error' : undefined} />
+                {movementFieldErrors.unitCost ? <small className="field-help field-help--error field-help--inline-error">{movementFieldErrors.unitCost}</small> : null}
                 <small className="field-help">Opcional. Atualiza o custo médio do item.</small>
               </label>
             ) : (
               <label className="field">
                 <span>Obra</span>
-                <input value={movementForm.constructionName} onChange={(e) => setMovementForm((c) => ({ ...c, constructionName: e.target.value }))} placeholder="Nome da obra de destino" required />
-                <small className="field-help">Use o nome da obra para rastrear esta saída.</small>
+                <select className={movementFieldErrors.constructionId ? 'select-field input-error' : 'select-field'} value={movementForm.constructionId} onChange={(e) => handleMovementFieldChange('constructionId', e.target.value)} required>
+                  <option value="">Selecione a obra de destino</option>
+                  {constructionOptions.map((construction) => <option key={construction.id} value={construction.id}>{construction.name}</option>)}
+                </select>
+                {movementFieldErrors.constructionId ? <small className="field-help field-help--error field-help--inline-error">{movementFieldErrors.constructionId}</small> : null}
+                <small className="field-help">Listagem de obras ativas aptas a receber material.</small>
               </label>
             )}
           </div>
@@ -459,4 +558,48 @@ function formatCurrency(value: number) {
 
 function formatQuantity(value: number) {
   return new Intl.NumberFormat('pt-BR', { maximumFractionDigits: 2 }).format(value || 0)
+}
+
+function validateStockForm(form: StockForm) {
+  const errors: Partial<Record<keyof StockForm, string>> = {}
+
+  if (!hasLetters(form.name)) errors.name = 'Informe um nome valido para o item.'
+  if (!stockCategoryOptions.includes(form.category as (typeof stockCategoryOptions)[number])) errors.category = 'Selecione uma categoria valida da lista.'
+  if (!stockUnitOptions.includes(form.unit as (typeof stockUnitOptions)[number])) errors.unit = 'Selecione uma unidade valida da lista.'
+
+  if (form.sku.trim() && !/^[A-Za-z0-9-]+$/.test(form.sku.trim())) {
+    errors.sku = 'SKU manual aceita apenas letras, numeros e hifen.'
+  }
+
+  if (Number(form.averageCost) < 0 || Number.isNaN(Number(form.averageCost))) {
+    errors.averageCost = 'Informe um custo medio igual ou maior que zero.'
+  }
+
+  if (form.supplier.trim() && !hasLetters(form.supplier)) {
+    errors.supplier = 'Fornecedor precisa conter letras.'
+  }
+
+  return errors
+}
+
+function validateMovementForm(form: MovementForm) {
+  const errors: Partial<Record<keyof MovementForm, string>> = {}
+
+  if (!form.quantity || Number(form.quantity) <= 0) {
+    errors.quantity = 'Informe uma quantidade maior que zero.'
+  }
+
+  if (form.type === 'ENTRY_PURCHASE' && form.unitCost && Number(form.unitCost) < 0) {
+    errors.unitCost = 'Custo unitario nao pode ser negativo.'
+  }
+
+  if (form.type === 'EXIT_CONSTRUCTION' && !form.constructionId) {
+    errors.constructionId = 'Selecione a obra que vai receber o material.'
+  }
+
+  return errors
+}
+
+function hasLetters(value: string) {
+  return /[A-Za-zÀ-ÖØ-öø-ÿ]/.test(value)
 }
